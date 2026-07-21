@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0000",
+  "type": "test",
+  "summary": "Reserved test advisory used to verify tooling. Not a real threat.",
+  "severity": "low",
+  "artifacts": [{ "ecosystem": "claude-skill", "name": "ska-test-artifact" }],
+  "references": [{ "type": "WEB", "url": "https://github.com/Akshay7273/skill-advisories" }],
+  "published": "2026-07-21T00:00:00Z",
+  "modified": "2026-07-21T00:00:00Z"
+}

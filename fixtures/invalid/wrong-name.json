@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-9903",
+  "type": "typosquat",
+  "summary": "Fixture advisory whose filename does not match its id.",
+  "severity": "medium",
+  "artifacts": [{ "ecosystem": "npm", "name": "fixture-typosquat" }],
+  "references": [{ "type": "WEB", "url": "https://example.com" }],
+  "published": "2026-07-01T00:00:00Z",
+  "modified": "2026-07-01T00:00:00Z"
+}

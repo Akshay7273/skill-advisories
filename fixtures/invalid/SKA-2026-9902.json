@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-9902",
+  "type": "malicious",
+  "summary": "Fixture advisory with an unknown ecosystem value.",
+  "severity": "high",
+  "artifacts": [{ "ecosystem": "chrome-extension", "name": "bad-fixture" }],
+  "references": [{ "type": "WEB", "url": "https://example.com" }],
+  "published": "2026-07-01T00:00:00Z",
+  "modified": "2026-07-01T00:00:00Z"
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-9901",
+  "type": "malicious",
+  "summary": "Fixture advisory: fake credential-stealing skill used in unit tests.",
+  "severity": "critical",
+  "behaviors": ["credential-theft", "data-exfiltration"],
+  "artifacts": [
+    { "ecosystem": "claude-skill", "name": "Fixture-Skill-One", "publisher": "fixture-author" },
+    { "ecosystem": "clawhub", "name": "fixture-skill-two", "versions": ["*"] }
+  ],
+  "references": [{ "type": "WEB", "url": "https://example.com/fixture-report" }],
+  "published": "2026-07-01T00:00:00Z",
+  "modified": "2026-07-02T00:00:00Z"
+}
