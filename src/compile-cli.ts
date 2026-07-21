@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import pc from "picocolors"
 import { buildFeed } from "./compile.js"
 import { loadAdvisories } from "./load.js"
@@ -16,6 +16,17 @@ if (problems.length > 0) {
 }
 
 const { feed, index } = buildFeed(loaded.map((l) => l.advisory))
+
+try {
+  const existingRaw = await readFile("feed/feed.json", "utf8")
+  const existingFeed = JSON.parse(existingRaw)
+  if (JSON.stringify(existingFeed.advisories) === JSON.stringify(feed.advisories)) {
+    feed.generated = existingFeed.generated
+  }
+} catch {
+  // file doesn't exist yet, keep fresh generated timestamp
+}
+
 await mkdir("feed", { recursive: true })
 await writeFile("feed/feed.json", JSON.stringify(feed, null, 2) + "\n", "utf8")
 await writeFile("feed/index.json", JSON.stringify(index, null, 2) + "\n", "utf8")
