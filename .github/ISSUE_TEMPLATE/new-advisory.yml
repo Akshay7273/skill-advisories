@@ -1,0 +1,41 @@
+name: Report a malicious or vulnerable skill
+description: Propose a new advisory backed by a published reference
+title: "[advisory] <skill name>"
+labels: ["advisory-proposal"]
+body:
+  - type: input
+    id: skill-name
+    attributes:
+      label: Skill / package name
+      placeholder: e.g. omnicogg
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options:
+        - claude-skill
+        - claude-plugin
+        - clawhub
+        - mcp-server
+        - npm
+        - pypi
+        - vscode-extension
+        - github-action
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Published reference(s)
+      description: Links to public reports, writeups, or takedowns. Advisories without published evidence are not accepted.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed malicious or vulnerable behavior
+      description: What does it do (credential theft, backdoor, prompt injection, ...)? Include hashes, domains, or IPs if published.
+    validations:
+      required: true

@@ -1,0 +1,30 @@
+name: Dispute an advisory
+description: Request correction or withdrawal of an existing advisory
+title: "[dispute] SKA-XXXX-XXXX"
+labels: ["dispute"]
+body:
+  - type: input
+    id: advisory-id
+    attributes:
+      label: Advisory ID
+      placeholder: SKA-2026-0001
+    validations:
+      required: true
+  - type: dropdown
+    id: relationship
+    attributes:
+      label: Your relationship to the flagged artifact
+      options:
+        - Author / publisher
+        - Security researcher
+        - User of the artifact
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why is the advisory incorrect?
+      description: Provide evidence. Disputes are reviewed against the references cited in the advisory.
+    validations:
+      required: true
