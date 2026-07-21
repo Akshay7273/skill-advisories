@@ -1,22 +1,42 @@
 {
   "name": "@akshay7273/skill-advisories",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Open advisory database for AI agent skills, plugins, and MCP servers — machine-readable threat data for the agent ecosystem.",
   "type": "module",
   "license": "MIT",
   "engines": {
     "node": ">=20"
   },
+  "bin": {
+    "skill-advisories": "dist/cli.js"
+  },
+  "main": "dist/lookup.js",
+  "files": [
+    "dist",
+    "schema",
+    "feed"
+  ],
   "scripts": {
     "validate": "tsx src/validate-cli.ts",
     "compile": "tsx src/compile-cli.ts",
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm test"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Akshay7273/skill-advisories.git"
   },
+  "keywords": [
+    "security",
+    "advisories",
+    "ai-agents",
+    "claude",
+    "agent-skills",
+    "mcp",
+    "supply-chain",
+    "threat-intelligence"
+  ],
   "dependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
