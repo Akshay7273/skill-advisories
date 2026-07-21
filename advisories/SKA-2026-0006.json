@@ -1,0 +1,17 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0006",
+  "type": "malicious",
+  "summary": "Skill moltbook-lm8 by moonshine-100rze was confirmed malicious in Snyk's ToxicSkills audit and remained live on clawhub.ai at publication.",
+  "details": "Listed in Snyk's confirmed-malicious IOC table from the ToxicSkills study, which verified 76 malicious payloads through human-in-the-loop analysis across the confirmed dataset. 100% of confirmed malicious skills in the study contained malicious code patterns and 91% also employed prompt injection.",
+  "severity": "high",
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "moltbook-lm8", "publisher": "moonshine-100rze", "versions": ["*"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/" }
+  ],
+  "credits": ["Snyk Security Labs"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}

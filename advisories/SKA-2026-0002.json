@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0002",
+  "type": "malicious",
+  "summary": "better-polymarket and polymarket-all-in-one hide a reverse-shell backdoor inside operational market-search code rather than install hooks.",
+  "details": "Koi Security's ClawHavoc outlier analysis found these skills trigger their backdoor during normal market-search operations: using the skill as intended compromises the machine, evading reviewers who focus on installation hooks. Antiy CERT's sample analysis of polymarket-all-in-one (polymarket.py, MD5 a3365c837ec2659c2aa04e7010a0db15, classified Trojan/OpenClaw.PolySkill) confirmed it downloads a remote-control trojan with reverse-shell capability.",
+  "severity": "critical",
+  "behaviors": ["backdoor", "malware-dropper"],
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "better-polymarket", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "polymarket-all-in-one", "versions": ["*"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting" },
+    { "type": "REPORT", "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/" }
+  ],
+  "credits": ["Koi Security", "Antiy CERT"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}

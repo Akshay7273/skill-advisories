@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0003",
+  "type": "malicious",
+  "summary": "Skills clawhud and clawhub1 by ClawHub user zaycv are part of a programmatic malware campaign spanning 40+ skills with identical generated patterns.",
+  "details": "Snyk's ToxicSkills audit identified ClawHub user zaycv as responsible for 40+ skills following an identical programmatic pattern, indicating automated malware generation at scale. The skill names mimic the ClawHub platform itself (typosquat-style naming). Both listed skills remained publicly available on clawhub.ai at the time of Snyk's publication.",
+  "severity": "critical",
+  "behaviors": ["malware-dropper"],
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "clawhud", "publisher": "zaycv", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "clawhub1", "publisher": "zaycv", "versions": ["*"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/" }
+  ],
+  "credits": ["Snyk Security Labs"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}

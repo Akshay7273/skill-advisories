@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0009",
+  "type": "malicious",
+  "summary": "money-radar performed runtime agentic affiliate injection, routing the agent's financial recommendations through attacker-controlled affiliate links.",
+  "details": "Unit42 identified this as a novel agentic threat: the skill weaponized the agent's advisory authority, routing all financial recommendations through affiliate links from a known-malicious domain, with the publisher retaining dynamic control over pushed products after installation. Part of a campaign targeting banking and crypto exchange workflows. Reported to ClawHub and removed.",
+  "severity": "high",
+  "behaviors": ["prompt-injection", "other"],
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "money-radar", "versions": ["*"], "sha256": ["ebb73dbb5aac1f6fe1a88e8f26126a1e1aa34c9f3345ad4345189b40d9bf1d1d"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/" }
+  ],
+  "credits": ["Unit42, Palo Alto Networks"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0001",
+  "type": "malicious",
+  "summary": "ClawHavoc campaign 'auto-updater' skills on ClawHub drop the Atomic macOS Stealer (AMOS) via password-protected archives and glot.io scripts.",
+  "details": "Koi Security audited all 2,857 ClawHub skills (Feb 2026) and found 341 malicious skills, 335 from a single campaign dubbed ClawHavoc; by Feb 16 the count had grown to 824. The named auto-updater-* variants deliver a keylogging trojan identified as Atomic macOS Stealer (AMOS) using password-protected ZIP archives to evade antivirus scanning and obfuscated glot.io shell scripts that fetch payloads from attacker-controlled servers (91.92.242.30, a confirmed AMOS C2). Antiy CERT independently counted 1,184 malicious skills across 12 author accounts, attributing 677 to publisher hightower6eu. Trend Micro separately confirmed AMOS distribution through malicious OpenClaw skills across ClawHub and SkillsMP.",
+  "severity": "critical",
+  "behaviors": ["malware-dropper", "credential-theft", "data-exfiltration"],
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "auto-updater-lth9t", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-m0fsa", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-mclql", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-mkukz", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-mn5ri", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-nlt3m", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-ocn18", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-p5rmt", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-qdyme", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-se38e", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-sxdg2", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-xcgnm", "versions": ["*"] },
+    { "ecosystem": "clawhub", "name": "auto-updater-xsunp", "versions": ["*"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting" },
+    { "type": "REPORT", "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/" },
+    { "type": "REPORT", "url": "https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html" },
+    { "type": "ARTICLE", "url": "https://www.prplbx.com/blog/clawhavoc-ai-supply-chain-attack" }
+  ],
+  "credits": ["Koi Security", "Antiy CERT", "Trend Micro Research"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}

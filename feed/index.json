@@ -1,1 +1,110 @@
-{}
+{
+  "clawhub:auto-updater-lth9t": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-m0fsa": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-mclql": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-mkukz": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-mn5ri": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-nlt3m": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-ocn18": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-p5rmt": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-qdyme": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-se38e": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-sxdg2": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-xcgnm": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:auto-updater-xsunp": [
+    "SKA-2026-0001"
+  ],
+  "clawhub:better-polymarket": [
+    "SKA-2026-0002"
+  ],
+  "clawhub:polymarket-all-in-one": [
+    "SKA-2026-0002"
+  ],
+  "clawhub:clawhud": [
+    "SKA-2026-0003"
+  ],
+  "clawhub:clawhub1": [
+    "SKA-2026-0003"
+  ],
+  "clawhub:base-agent": [
+    "SKA-2026-0004"
+  ],
+  "clawhub:bybit-agent": [
+    "SKA-2026-0004"
+  ],
+  "clawhub:polymarket-trading-bot": [
+    "SKA-2026-0004"
+  ],
+  "clawhub:moltbookagent": [
+    "SKA-2026-0005"
+  ],
+  "clawhub:publish-dist": [
+    "SKA-2026-0005"
+  ],
+  "clawhub:moltbook-lm8": [
+    "SKA-2026-0006"
+  ],
+  "clawhub:tradingview-ai-indicator-assistant": [
+    "SKA-2026-0007"
+  ],
+  "clawhub:ai-tradingview-assistant-for-macos": [
+    "SKA-2026-0007"
+  ],
+  "clawhub:omnicogg": [
+    "SKA-2026-0008"
+  ],
+  "clawhub:money-radar": [
+    "SKA-2026-0009"
+  ],
+  "clawhub:polymarketbtc": [
+    "SKA-2026-0010"
+  ],
+  "clawhub:polymarketbtcassistant": [
+    "SKA-2026-0010"
+  ],
+  "clawhub:google-k53": [
+    "SKA-2026-0011"
+  ],
+  "clawhub:rankaj": [
+    "SKA-2026-0012"
+  ],
+  "clawhub:santi-text-game": [
+    "SKA-2026-0013"
+  ],
+  "clawhub:letssendit": [
+    "SKA-2026-0013"
+  ],
+  "clawhub:pdfcheck": [
+    "SKA-2026-0013"
+  ],
+  "clawhub:update": [
+    "SKA-2026-0013"
+  ],
+  "clawhub:wistec-core": [
+    "SKA-2026-0013"
+  ]
+}

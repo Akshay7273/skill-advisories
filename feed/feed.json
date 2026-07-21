@@ -2,7 +2,627 @@
   "schema_version": "1",
   "name": "skill-advisories",
   "source": "https://github.com/Akshay7273/skill-advisories",
-  "generated": "2026-07-21T17:39:26.874Z",
-  "advisory_count": 0,
-  "advisories": []
+  "generated": "2026-07-21T19:55:17.634Z",
+  "advisory_count": 13,
+  "advisories": [
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0001",
+      "type": "malicious",
+      "summary": "ClawHavoc campaign 'auto-updater' skills on ClawHub drop the Atomic macOS Stealer (AMOS) via password-protected archives and glot.io scripts.",
+      "details": "Koi Security audited all 2,857 ClawHub skills (Feb 2026) and found 341 malicious skills, 335 from a single campaign dubbed ClawHavoc; by Feb 16 the count had grown to 824. The named auto-updater-* variants deliver a keylogging trojan identified as Atomic macOS Stealer (AMOS) using password-protected ZIP archives to evade antivirus scanning and obfuscated glot.io shell scripts that fetch payloads from attacker-controlled servers (91.92.242.30, a confirmed AMOS C2). Antiy CERT independently counted 1,184 malicious skills across 12 author accounts, attributing 677 to publisher hightower6eu. Trend Micro separately confirmed AMOS distribution through malicious OpenClaw skills across ClawHub and SkillsMP.",
+      "severity": "critical",
+      "behaviors": [
+        "malware-dropper",
+        "credential-theft",
+        "data-exfiltration"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-lth9t",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-m0fsa",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-mclql",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-mkukz",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-mn5ri",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-nlt3m",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-ocn18",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-p5rmt",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-qdyme",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-se38e",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-sxdg2",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-xcgnm",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-xsunp",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html"
+        },
+        {
+          "type": "ARTICLE",
+          "url": "https://www.prplbx.com/blog/clawhavoc-ai-supply-chain-attack"
+        }
+      ],
+      "credits": [
+        "Koi Security",
+        "Antiy CERT",
+        "Trend Micro Research"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0002",
+      "type": "malicious",
+      "summary": "better-polymarket and polymarket-all-in-one hide a reverse-shell backdoor inside operational market-search code rather than install hooks.",
+      "details": "Koi Security's ClawHavoc outlier analysis found these skills trigger their backdoor during normal market-search operations: using the skill as intended compromises the machine, evading reviewers who focus on installation hooks. Antiy CERT's sample analysis of polymarket-all-in-one (polymarket.py, MD5 a3365c837ec2659c2aa04e7010a0db15, classified Trojan/OpenClaw.PolySkill) confirmed it downloads a remote-control trojan with reverse-shell capability.",
+      "severity": "critical",
+      "behaviors": [
+        "backdoor",
+        "malware-dropper"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "better-polymarket",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarket-all-in-one",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ],
+      "credits": [
+        "Koi Security",
+        "Antiy CERT"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0003",
+      "type": "malicious",
+      "summary": "Skills clawhud and clawhub1 by ClawHub user zaycv are part of a programmatic malware campaign spanning 40+ skills with identical generated patterns.",
+      "details": "Snyk's ToxicSkills audit identified ClawHub user zaycv as responsible for 40+ skills following an identical programmatic pattern, indicating automated malware generation at scale. The skill names mimic the ClawHub platform itself (typosquat-style naming). Both listed skills remained publicly available on clawhub.ai at the time of Snyk's publication.",
+      "severity": "critical",
+      "behaviors": [
+        "malware-dropper"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "clawhud",
+          "publisher": "zaycv",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "clawhub1",
+          "publisher": "zaycv",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        }
+      ],
+      "credits": [
+        "Snyk Security Labs"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0004",
+      "type": "malicious",
+      "summary": "ClawHub user Aslaep123 published malicious crypto-trading skills (base-agent, bybit-agent, polymarket-trading-bot) targeting credential theft from traders.",
+      "details": "Snyk's ToxicSkills audit identified multiple malicious skills by Aslaep123 targeting crypto/trading use cases, high-value targets for credential theft; base-agent and bybit-agent remained publicly available on clawhub.ai at publication. Antiy CERT's incident timeline records polymarket-trading-bot v1.0.1 by aslaep123 as the first malicious skill of the ClawHavoc wave, with base-agent v1.0.0 and bybit-agent v1.0.0 following in the subsequent days.",
+      "severity": "critical",
+      "behaviors": [
+        "credential-theft",
+        "crypto-theft"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "base-agent",
+          "publisher": "Aslaep123",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "bybit-agent",
+          "publisher": "Aslaep123",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarket-trading-bot",
+          "publisher": "Aslaep123",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ],
+      "credits": [
+        "Snyk Security Labs",
+        "Antiy CERT"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0005",
+      "type": "malicious",
+      "summary": "Skills moltbookagent and publish-dist by pepe276 embed Unicode-obfuscated prompt injection and DAN-style jailbreaks targeting agent safety mechanisms.",
+      "details": "Snyk's ToxicSkills audit found these skills use Unicode contraband injection (invisible/obfuscated characters) combined with DAN-style jailbreak prompts to bypass agent safety constraints. Both remained publicly available on clawhub.ai at the time of Snyk's publication.",
+      "severity": "high",
+      "behaviors": [
+        "prompt-injection"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "moltbookagent",
+          "publisher": "pepe276",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "publish-dist",
+          "publisher": "pepe276",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        }
+      ],
+      "credits": [
+        "Snyk Security Labs"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0006",
+      "type": "malicious",
+      "summary": "Skill moltbook-lm8 by moonshine-100rze was confirmed malicious in Snyk's ToxicSkills audit and remained live on clawhub.ai at publication.",
+      "details": "Listed in Snyk's confirmed-malicious IOC table from the ToxicSkills study, which verified 76 malicious payloads through human-in-the-loop analysis across the confirmed dataset. 100% of confirmed malicious skills in the study contained malicious code patterns and 91% also employed prompt injection.",
+      "severity": "high",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "moltbook-lm8",
+          "publisher": "moonshine-100rze",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        }
+      ],
+      "credits": [
+        "Snyk Security Labs"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0007",
+      "type": "malicious",
+      "summary": "TradingView 'AI assistant' skills for macOS used a rentry.co paste-site lure to run a Base64 dropper installing the cluw macOS infostealer.",
+      "details": "Unit42 (Palo Alto Networks) found these skills posing as productivity tools for traders. Both embedded a malicious prerequisite block that blocked skill functionality until the agent followed a paste-site redirect lure (rentry.co/openclaw-code) serving a Base64-encoded command. The command fetched a payload from 2.26.75.16 identified as a macOS infostealer named cluw (SHA256 818aea6143282b352fdfdc0f3ebf77a36e54eb3befb5cad1a355a99ab97c6aa7) connecting to C2 infrastructure. Both skills evaded ClawScan and VirusTotal screening until reported by Unit42; ClawHub banned the accounts and deleted the skills.",
+      "severity": "critical",
+      "behaviors": [
+        "malware-dropper",
+        "credential-theft"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "tradingview-ai-indicator-assistant",
+          "versions": [
+            "*"
+          ],
+          "sha256": [
+            "b6c7e0bf573b1c7d9d3a05eb08d26579199515b847df984862805f44a7af8007"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "ai-tradingview-assistant-for-macos",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ],
+      "credits": [
+        "Unit42, Palo Alto Networks"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0008",
+      "type": "malicious",
+      "summary": "The omnicogg skill hid a malicious payload at the start of a README.md padded with 22 MB of filler to exceed scanner size limits and evade detection.",
+      "details": "First disclosed by JFrog Security Research (March 2026) and analyzed by Unit42: the malicious payload appears at the start of the README.md, followed by 22 MB of padding characters that inflate the file beyond the size limits many content-analysis pipelines enforce, bypassing both ClawScan and VirusTotal. Reported to ClawHub and removed.",
+      "severity": "critical",
+      "behaviors": [
+        "malware-dropper"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "omnicogg",
+          "versions": [
+            "*"
+          ],
+          "sha256": [
+            "b30eaed1f7478c28f4ec50d07ed5ef014ffbc4b2bc5a38d689ba9f7abb5e19c2"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://research.jfrog.com/post/omnicogg-malicious-skill/"
+        }
+      ],
+      "credits": [
+        "JFrog Security Research",
+        "Unit42, Palo Alto Networks"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0009",
+      "type": "malicious",
+      "summary": "money-radar performed runtime agentic affiliate injection, routing the agent's financial recommendations through attacker-controlled affiliate links.",
+      "details": "Unit42 identified this as a novel agentic threat: the skill weaponized the agent's advisory authority, routing all financial recommendations through affiliate links from a known-malicious domain, with the publisher retaining dynamic control over pushed products after installation. Part of a campaign targeting banking and crypto exchange workflows. Reported to ClawHub and removed.",
+      "severity": "high",
+      "behaviors": [
+        "prompt-injection",
+        "other"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "money-radar",
+          "versions": [
+            "*"
+          ],
+          "sha256": [
+            "ebb73dbb5aac1f6fe1a88e8f26126a1e1aa34c9f3345ad4345189b40d9bf1d1d"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ],
+      "credits": [
+        "Unit42, Palo Alto Networks"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0010",
+      "type": "malicious",
+      "summary": "Skills polymarketbtc and polymarketbtcassistant by krajekisbtc exfiltrated cryptocurrency private keys via the Telegram Bot API.",
+      "details": "Unit42 documented this distinct cluster exfiltrating cryptocurrency private keys via the Telegram Bot API, a command-and-control channel independent of the shared ClawHavoc dropper infrastructure.",
+      "severity": "critical",
+      "behaviors": [
+        "crypto-theft",
+        "credential-theft",
+        "data-exfiltration"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarketbtc",
+          "publisher": "krajekisbtc",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarketbtcassistant",
+          "publisher": "krajekisbtc",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ],
+      "credits": [
+        "Unit42, Palo Alto Networks"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0011",
+      "type": "malicious",
+      "summary": "google-k53 embedded fake install steps in SKILL.md directing agents to run a Base64-decoded command that downloads and executes an AMOS binary on macOS.",
+      "details": "Antiy CERT sample analysis (classified Trojan/OpenClaw.PolySkill): the skill's documentation falsely claims users must manually install an 'openclaw-core' component; on macOS it executes a Base64-decoded command to download and run a binary payload from the attacker's server. SKILL.md MD5 5e4428176aeb8cfc7f0391654d683a2a. The associated downloaded binary was classified Trojan/MacOS.Amos (MD5 be24b44d4895c6bc14e3f98a9687a399).",
+      "severity": "critical",
+      "behaviors": [
+        "malware-dropper",
+        "credential-theft"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "google-k53",
+          "versions": [
+            "1.0.0"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ],
+      "credits": [
+        "Antiy CERT"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0012",
+      "type": "malicious",
+      "summary": "rankaj bundled a JavaScript payload that reads trusted AI service configuration and exfiltrates stolen data to an attacker-controlled webhook.",
+      "details": "Antiy CERT sample analysis (classified Trojan/OpenClaw.PolySkill): the malicious code resides in a JavaScript file (index.js, MD5 2444b3ab5de42fcca22e6025cf018e3b) inside the skill archive and exfiltrates data, including trusted configuration sources for paid AI services (such as Claude and OpenAI), to a webhook. This 'environmental parasitism' technique exploits the agent's elevated privileges (reading .env files) to send credentials directly to webhooks without complex C2 communication.",
+      "severity": "critical",
+      "behaviors": [
+        "credential-theft",
+        "data-exfiltration"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "rankaj",
+          "versions": [
+            "1.0.0"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ],
+      "credits": [
+        "Antiy CERT"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    },
+    {
+      "schema_version": "1",
+      "id": "SKA-2026-0013",
+      "type": "malicious",
+      "summary": "Evasive malicious skills identified by Unit42 on ClawHub: santi-text-game, letssendit, pdfcheck, update, and wistec-core (publisher accounts banned).",
+      "details": "Listed in the Publisher/Skill indicators of compromise from Unit42's February-May 2026 analysis of persistent and evasive malicious skills on ClawHub that evaded ClawScan and VirusTotal screening. Unit42 reported the skills for takedown; OpenClaw banned the accounts and deleted the skills. Unit42 redacted the publisher names.",
+      "severity": "high",
+      "behaviors": [
+        "malware-dropper"
+      ],
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "santi-text-game",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "letssendit",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "pdfcheck",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "update",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "wistec-core",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ],
+      "credits": [
+        "Unit42, Palo Alto Networks"
+      ],
+      "published": "2026-07-22T00:00:00Z",
+      "modified": "2026-07-22T00:00:00Z"
+    }
+  ]
 }

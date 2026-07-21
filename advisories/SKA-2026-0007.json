@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0007",
+  "type": "malicious",
+  "summary": "TradingView 'AI assistant' skills for macOS used a rentry.co paste-site lure to run a Base64 dropper installing the cluw macOS infostealer.",
+  "details": "Unit42 (Palo Alto Networks) found these skills posing as productivity tools for traders. Both embedded a malicious prerequisite block that blocked skill functionality until the agent followed a paste-site redirect lure (rentry.co/openclaw-code) serving a Base64-encoded command. The command fetched a payload from 2.26.75.16 identified as a macOS infostealer named cluw (SHA256 818aea6143282b352fdfdc0f3ebf77a36e54eb3befb5cad1a355a99ab97c6aa7) connecting to C2 infrastructure. Both skills evaded ClawScan and VirusTotal screening until reported by Unit42; ClawHub banned the accounts and deleted the skills.",
+  "severity": "critical",
+  "behaviors": ["malware-dropper", "credential-theft"],
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "tradingview-ai-indicator-assistant", "versions": ["*"], "sha256": ["b6c7e0bf573b1c7d9d3a05eb08d26579199515b847df984862805f44a7af8007"] },
+    { "ecosystem": "clawhub", "name": "ai-tradingview-assistant-for-macos", "versions": ["*"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/" }
+  ],
+  "credits": ["Unit42, Palo Alto Networks"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}

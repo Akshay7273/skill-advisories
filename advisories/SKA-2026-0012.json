@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0012",
+  "type": "malicious",
+  "summary": "rankaj bundled a JavaScript payload that reads trusted AI service configuration and exfiltrates stolen data to an attacker-controlled webhook.",
+  "details": "Antiy CERT sample analysis (classified Trojan/OpenClaw.PolySkill): the malicious code resides in a JavaScript file (index.js, MD5 2444b3ab5de42fcca22e6025cf018e3b) inside the skill archive and exfiltrates data, including trusted configuration sources for paid AI services (such as Claude and OpenAI), to a webhook. This 'environmental parasitism' technique exploits the agent's elevated privileges (reading .env files) to send credentials directly to webhooks without complex C2 communication.",
+  "severity": "critical",
+  "behaviors": ["credential-theft", "data-exfiltration"],
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "rankaj", "versions": ["1.0.0"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/" }
+  ],
+  "credits": ["Antiy CERT"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}

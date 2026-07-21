@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "id": "SKA-2026-0011",
+  "type": "malicious",
+  "summary": "google-k53 embedded fake install steps in SKILL.md directing agents to run a Base64-decoded command that downloads and executes an AMOS binary on macOS.",
+  "details": "Antiy CERT sample analysis (classified Trojan/OpenClaw.PolySkill): the skill's documentation falsely claims users must manually install an 'openclaw-core' component; on macOS it executes a Base64-decoded command to download and run a binary payload from the attacker's server. SKILL.md MD5 5e4428176aeb8cfc7f0391654d683a2a. The associated downloaded binary was classified Trojan/MacOS.Amos (MD5 be24b44d4895c6bc14e3f98a9687a399).",
+  "severity": "critical",
+  "behaviors": ["malware-dropper", "credential-theft"],
+  "artifacts": [
+    { "ecosystem": "clawhub", "name": "google-k53", "versions": ["1.0.0"] }
+  ],
+  "references": [
+    { "type": "REPORT", "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/" }
+  ],
+  "credits": ["Antiy CERT"],
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z"
+}
