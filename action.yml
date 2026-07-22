@@ -16,6 +16,18 @@ inputs:
     description: "Alternate feed URL or local file path. Defaults to the official feed."
     required: false
     default: ""
+  format:
+    description: "Output format: human, json, or sarif. Defaults to human."
+    required: false
+    default: "human"
+  sarif-file:
+    description: "Output path for SARIF report file. Forces --format sarif."
+    required: false
+    default: ""
+  fail-on:
+    description: "Minimum severity threshold to trigger failure: low, medium, high, critical."
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -26,11 +38,27 @@ runs:
         if [ -n "${{ inputs.feed }}" ]; then
           ARGS+=(--feed "${{ inputs.feed }}")
         fi
+        if [ -n "${{ inputs.fail-on }}" ]; then
+          ARGS+=(--fail-on "${{ inputs.fail-on }}")
+        fi
+        if [ -n "${{ inputs.sarif-file }}" ]; then
+          ARGS+=(--format sarif)
+        elif [ -n "${{ inputs.format }}" ]; then
+          ARGS+=(--format "${{ inputs.format }}")
+        fi
+
+        CMD=()
         if [ -n "${{ inputs.names }}" ]; then
-          npx -y @akshay7273/skill-advisories@latest check ${{ inputs.names }} "${ARGS[@]}"
+          CMD=(npx -y @akshay7273/skill-advisories@latest check ${{ inputs.names }} "${ARGS[@]}")
         elif [ -n "${{ inputs.scan-dir }}" ]; then
-          npx -y @akshay7273/skill-advisories@latest scan "${{ inputs.scan-dir }}" "${ARGS[@]}"
+          CMD=(npx -y @akshay7273/skill-advisories@latest scan "${{ inputs.scan-dir }}" "${ARGS[@]}")
         else
           echo "error: provide the 'names' or 'scan-dir' input"
           exit 2
+        fi
+
+        if [ -n "${{ inputs.sarif-file }}" ]; then
+          "${CMD[@]}" > "${{ inputs.sarif-file }}"
+        else
+          "${CMD[@]}"
         fi

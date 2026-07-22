@@ -4,6 +4,7 @@ import pc from "picocolors";
 import { DEFAULT_FEED_URL, collectKnownNames, loadFeed, matchHashes, matchNames } from "./lookup.js";
 import { defaultSkillDirs, scanSkills } from "./scan.js";
 import { findNearMatches } from "./typosquat.js";
+import { buildSarif, meetsThreshold } from "./sarif.js";
 const VERSION = createRequire(import.meta.url)("../package.json").version;
 const HELP = `skill-advisories ${VERSION} — open advisory database for AI agent skills
 
@@ -13,7 +14,9 @@ Usage:
   skill-advisories scan [dir...]     Scan installed skill directories (defaults to known locations)
 
 Options:
-  --json           Machine-readable JSON output
+  --format <format> Output format: human, json, or sarif (default: human)
+  --json           Alias for --format json
+  --fail-on <sev>  Minimum severity to trigger exit code 1: low, medium, high, critical
   --feed <source>  Feed URL or local file path (default: official feed)
   --sha256         Treat positional arguments as SHA-256 hashes
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
@@ -22,23 +25,42 @@ Options:
   --help, -h       Show this help
   --version, -v    Show version
 
-Exit codes: 0 = no advisories matched, 1 = matches found (or warnings with --strict), 2 = usage or feed error`;
+Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage or feed error`;
 function fail(message) {
     console.error(pc.red(`error: ${message}`));
     process.exit(2);
 }
 function parseArgs(argv) {
     const positionals = [];
-    let json = false;
+    let format = "human";
     let feed = DEFAULT_FEED_URL;
     let sha256 = false;
     let strict = false;
     let offline = false;
     let refresh = false;
+    let failOn = undefined;
+    const VALID_FORMATS = ["human", "json", "sarif"];
+    const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === "--json") {
-            json = true;
+            format = "json";
+        }
+        else if (arg === "--format") {
+            i++;
+            const value = argv[i];
+            if (!value || !VALID_FORMATS.includes(value)) {
+                fail(`invalid format "${value ?? ""}", expected human, json, or sarif`);
+            }
+            format = value;
+        }
+        else if (arg === "--fail-on") {
+            i++;
+            const value = argv[i];
+            if (!value || !VALID_SEVERITIES.includes(value.toLowerCase())) {
+                fail(`invalid severity threshold "${value ?? ""}", expected low, medium, high, or critical`);
+            }
+            failOn = value.toLowerCase();
         }
         else if (arg === "--feed") {
             i++;
@@ -78,7 +100,7 @@ function parseArgs(argv) {
         fail("--offline and --refresh are mutually exclusive");
     }
     const [command, ...rest] = positionals;
-    return { command, positionals: rest, json, feed, sha256, strict, offline, refresh };
+    return { command, positionals: rest, format, feed, sha256, strict, offline, refresh, failOn };
 }
 async function loadFeedOrFail(source, options) {
     try {
@@ -88,8 +110,19 @@ async function loadFeedOrFail(source, options) {
         fail(err instanceof Error ? err.message : String(err));
     }
 }
-function report(checked, matches, warnings, json, strict) {
-    if (json) {
+function report(checked, matches, warnings, format, strict, failOn) {
+    if (format === "sarif") {
+        const findings = matches.map((m) => ({
+            advisoryId: m.advisory.id,
+            severity: m.advisory.severity,
+            summary: m.advisory.summary,
+            artifactName: m.query,
+            matchedBy: m.matchedBy,
+            file: m.file,
+        }));
+        console.log(JSON.stringify(buildSarif(findings, VERSION), null, 2));
+    }
+    else if (format === "json") {
         console.log(JSON.stringify({
             checked,
             matchCount: matches.length,
@@ -137,9 +170,15 @@ function report(checked, matches, warnings, json, strict) {
             }
         }
     }
-    const hasMatches = matches.length > 0;
+    let triggerFailure = false;
+    if (failOn) {
+        triggerFailure = matches.some((m) => meetsThreshold(m.advisory.severity, failOn));
+    }
+    else {
+        triggerFailure = matches.length > 0;
+    }
     const hasWarnings = warnings.length > 0;
-    process.exitCode = hasMatches || (strict && hasWarnings) ? 1 : 0;
+    process.exitCode = triggerFailure || (strict && hasWarnings) ? 1 : 0;
 }
 const args = parseArgs(process.argv.slice(2));
 if (!args.command) {
@@ -176,7 +215,7 @@ if (args.command === "check") {
                 }
             }
         }
-        report(args.positionals.length, matches, [], args.json, args.strict);
+        report(args.positionals.length, matches, [], args.format, args.strict, args.failOn);
     }
     else {
         const nameHits = matchNames(feed, args.positionals);
@@ -201,14 +240,14 @@ if (args.command === "check") {
                 }
             }
         }
-        report(args.positionals.length, matches, warnings, args.json, args.strict);
+        report(args.positionals.length, matches, warnings, args.format, args.strict, args.failOn);
     }
 }
 else if (args.command === "scan") {
     const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs();
     const feed = await loadFeedOrFail(args.feed, feedOptions);
     const result = await scanSkills(dirs, feed);
-    if (!args.json) {
+    if (args.format === "human") {
         for (const d of result.installed) {
             console.log(pc.dim(`scanning ${d.dir} (${d.names.length} skills)`));
         }
@@ -216,7 +255,7 @@ else if (args.command === "scan") {
             console.log(pc.yellow("no skill directories found"));
         }
     }
-    report(result.scannedCount, result.matches, result.warnings, args.json, args.strict);
+    report(result.scannedCount, result.matches, result.warnings, args.format, args.strict, args.failOn);
 }
 else {
     fail(`unknown command "${args.command}"`);

@@ -1,0 +1,62 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run validate
+      - run: npm test
+      - run: npm run build
+      - name: Feed is in sync with advisories
+        run: |
+          npm run compile
+          git diff --exit-code feed/
+  action-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Clean name passes
+        uses: ./
+        with:
+          names: totally-safe-skill
+      - name: Known-bad name is detected
+        id: detect
+        continue-on-error: true
+        uses: ./
+        with:
+          names: omnicogg
+      - name: Assert detection failed the step
+        run: |
+          if [ "${{ steps.detect.outcome }}" != "failure" ]; then
+            echo "expected the detection step to fail (exit 1), but it did not"
+            exit 1
+          fi
+          echo "detection behaved correctly"
+      - name: Known-bad SARIF export
+        id: sarif
+        continue-on-error: true
+        uses: ./
+        with:
+          names: omnicogg
+          sarif-file: results.sarif
+      - name: Upload SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
