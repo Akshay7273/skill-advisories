@@ -31,3 +31,38 @@ export function matchNames(feed, names) {
     }
     return matches;
 }
+/** All non-withdrawn artifact names in the feed (for typosquat proximity). */
+export function collectKnownNames(feed) {
+    const names = new Set();
+    for (const adv of feed.advisories) {
+        if (adv.withdrawn)
+            continue;
+        for (const art of adv.artifacts)
+            names.add(art.name);
+    }
+    return [...names];
+}
+/** Match SHA-256 hashes (hex, any case) against non-withdrawn advisory artifacts. */
+export function matchHashes(feed, hashes) {
+    const wanted = new Map();
+    for (const adv of feed.advisories) {
+        if (adv.withdrawn)
+            continue;
+        for (const art of adv.artifacts) {
+            for (const h of art.sha256 ?? []) {
+                const key = h.toLowerCase();
+                const ids = wanted.get(key) ?? [];
+                if (!ids.includes(adv.id))
+                    ids.push(adv.id);
+                wanted.set(key, ids);
+            }
+        }
+    }
+    const out = [];
+    for (const h of hashes) {
+        const ids = wanted.get(h.toLowerCase());
+        if (ids)
+            out.push({ sha256: h.toLowerCase(), advisoryIds: ids });
+    }
+    return out;
+}

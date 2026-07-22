@@ -37,3 +37,40 @@ export function matchNames(feed: Feed, names: string[]): Match[] {
   }
   return matches
 }
+
+export type HashMatch = {
+	sha256: string
+	advisoryIds: string[]
+}
+
+/** All non-withdrawn artifact names in the feed (for typosquat proximity). */
+export function collectKnownNames(feed: Feed): string[] {
+	const names = new Set<string>()
+	for (const adv of feed.advisories) {
+		if (adv.withdrawn) continue
+		for (const art of adv.artifacts) names.add(art.name)
+	}
+	return [...names]
+}
+
+/** Match SHA-256 hashes (hex, any case) against non-withdrawn advisory artifacts. */
+export function matchHashes(feed: Feed, hashes: string[]): HashMatch[] {
+	const wanted = new Map<string, string[]>()
+	for (const adv of feed.advisories) {
+		if (adv.withdrawn) continue
+		for (const art of adv.artifacts) {
+			for (const h of art.sha256 ?? []) {
+				const key = h.toLowerCase()
+				const ids = wanted.get(key) ?? []
+				if (!ids.includes(adv.id)) ids.push(adv.id)
+				wanted.set(key, ids)
+			}
+		}
+	}
+	const out: HashMatch[] = []
+	for (const h of hashes) {
+		const ids = wanted.get(h.toLowerCase())
+		if (ids) out.push({ sha256: h.toLowerCase(), advisoryIds: ids })
+	}
+	return out
+}

@@ -13,3 +13,11 @@ export declare function loadFeed(source?: string): Promise<Feed>;
  * (case-insensitive, across all ecosystems). Withdrawn advisories are skipped.
  */
 export declare function matchNames(feed: Feed, names: string[]): Match[];
+export type HashMatch = {
+    sha256: string;
+    advisoryIds: string[];
+};
+/** All non-withdrawn artifact names in the feed (for typosquat proximity). */
+export declare function collectKnownNames(feed: Feed): string[];
+/** Match SHA-256 hashes (hex, any case) against non-withdrawn advisory artifacts. */
+export declare function matchHashes(feed: Feed, hashes: string[]): HashMatch[];
