@@ -14,15 +14,10 @@ skill-advisories is a community advisory database for AI agent skills, plugins, 
 3. Verify and regenerate the feed:
 
 ```
-
 npm install
-
 npm run validate
-
 npm test
-
 npm run compile
-
 ```
 
 4. Commit the advisory **and** the regenerated `feed/` files — CI fails if the feed is out of sync with the advisories.
@@ -43,3 +38,7 @@ npm run compile
 | `npm test` | Run the test suite |
 | `npm run compile` | Regenerate `feed/feed.json` and `feed/index.json` |
 | `npm run build` | Type-check and compile the CLI |
+
+## Versioning
+
+This project follows Semantic Versioning (semver). Continuous feed data updates land directly on `main` and require no new software releases. CLI engine changes, schema updates, or GitHub Action modifications ship as semver releases.
