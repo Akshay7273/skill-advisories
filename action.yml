@@ -47,11 +47,12 @@ runs:
           ARGS+=(--format "${{ inputs.format }}")
         fi
 
+        CLI_BIN="${GITHUB_ACTION_PATH:-.}/dist/cli.js"
         CMD=()
         if [ -n "${{ inputs.names }}" ]; then
-          CMD=(npx -y @akshay7273/skill-advisories@latest check ${{ inputs.names }} "${ARGS[@]}")
+          CMD=(node "$CLI_BIN" check ${{ inputs.names }} "${ARGS[@]}")
         elif [ -n "${{ inputs.scan-dir }}" ]; then
-          CMD=(npx -y @akshay7273/skill-advisories@latest scan "${{ inputs.scan-dir }}" "${ARGS[@]}")
+          CMD=(node "$CLI_BIN" scan "${{ inputs.scan-dir }}" "${ARGS[@]}")
         else
           echo "error: provide the 'names' or 'scan-dir' input"
           exit 2
