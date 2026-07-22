@@ -1,8 +1,8 @@
 name: "skill-advisories check"
 description: "Fail CI if any AI agent skill matches a published advisory for malicious, vulnerable, or typosquatted skills."
 branding:
-  icon: "shield"
-  color: "red"
+  icon: shield
+  color: red
 inputs:
   names:
     description: "Space-separated skill names to check against the advisory feed."
