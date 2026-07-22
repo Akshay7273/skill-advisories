@@ -88,9 +88,9 @@ Inputs: `names` (space-separated skill names), `scan-dir` (directory to scan), `
 2. No hearsay: submissions without a published report or reproducible evidence are not listed.
 3. Advisories can be withdrawn; disputes are handled via GitHub issues.
 
-## Performance
+## Accuracy & performance
 
-Benchmarked on a stock VPS (Node 22): scanning **10,000 installed skills** (7,517 real community skills harvested from public collections, scaled to 10,000 with copies) completes in **1.86 seconds**, including the remote feed fetch. A false-positive sweep across **2,656 unique real-world skill names** — drawn from the anthropics/skills, alirezarezvani/claude-skills, K-Dense scientific skills, and other public collections — produced **zero matches**.
+Benchmarked on a stock VPS (Node 22): scanning **10,000 installed skills** (7,517 real community skills harvested from public collections, scaled to 10,000 with copies) completes in **1.86 seconds**, including the remote feed fetch. In the same corpus, a planted known-bad skill at position 10,002 was **flagged in under a second**. A full recall audit detects **all 36 advisory artifacts**, including case variants; since v0.2.0, file-hash matching also catches renamed copies. A false-positive sweep across **2,656 unique real-world skill names** — drawn from the anthropics/skills, alirezarezvani/claude-skills, K-Dense scientific skills, and other public collections — produced **zero matches**.
 
 ## License
 
