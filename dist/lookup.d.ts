@@ -6,8 +6,13 @@ export type Match = {
     advisory: Advisory;
     artifactNames: string[];
 };
+export type LoadFeedOptions = {
+    offline?: boolean;
+    refresh?: boolean;
+    strict?: boolean;
+};
 /** Load the advisory feed from a URL (http/https) or a local file path. */
-export declare function loadFeed(source?: string): Promise<Feed>;
+export declare function loadFeed(source?: string, options?: LoadFeedOptions): Promise<Feed>;
 /**
  * Find advisories whose artifacts match any of the given names
  * (case-insensitive, across all ecosystems). Withdrawn advisories are skipped.

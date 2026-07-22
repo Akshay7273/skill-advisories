@@ -17,6 +17,8 @@ Options:
   --feed <source>  Feed URL or local file path (default: official feed)
   --sha256         Treat positional arguments as SHA-256 hashes
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
+  --offline        Use cached feed only; fail if cache is missing
+  --refresh        Ignore cached feed; force network download
   --help, -h       Show this help
   --version, -v    Show version
 
@@ -31,6 +33,8 @@ function parseArgs(argv) {
     let feed = DEFAULT_FEED_URL;
     let sha256 = false;
     let strict = false;
+    let offline = false;
+    let refresh = false;
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === "--json") {
@@ -49,6 +53,12 @@ function parseArgs(argv) {
         else if (arg === "--strict") {
             strict = true;
         }
+        else if (arg === "--offline") {
+            offline = true;
+        }
+        else if (arg === "--refresh") {
+            refresh = true;
+        }
         else if (arg === "--help" || arg === "-h") {
             console.log(HELP);
             process.exit(0);
@@ -64,12 +74,15 @@ function parseArgs(argv) {
             positionals.push(arg);
         }
     }
+    if (offline && refresh) {
+        fail("--offline and --refresh are mutually exclusive");
+    }
     const [command, ...rest] = positionals;
-    return { command, positionals: rest, json, feed, sha256, strict };
+    return { command, positionals: rest, json, feed, sha256, strict, offline, refresh };
 }
-async function loadFeedOrFail(source) {
+async function loadFeedOrFail(source, options) {
     try {
-        return await loadFeed(source);
+        return await loadFeed(source, options);
     }
     catch (err) {
         fail(err instanceof Error ? err.message : String(err));
@@ -133,10 +146,11 @@ if (!args.command) {
     console.log(HELP);
     process.exit(2);
 }
+const feedOptions = { offline: args.offline, refresh: args.refresh, strict: args.strict };
 if (args.command === "check") {
     if (args.positionals.length === 0)
         fail("check requires at least one skill name or hash");
-    const feed = await loadFeedOrFail(args.feed);
+    const feed = await loadFeedOrFail(args.feed, feedOptions);
     if (args.sha256) {
         for (const h of args.positionals) {
             if (!/^[0-9a-fA-F]{64}$/.test(h)) {
@@ -192,7 +206,7 @@ if (args.command === "check") {
 }
 else if (args.command === "scan") {
     const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs();
-    const feed = await loadFeedOrFail(args.feed);
+    const feed = await loadFeedOrFail(args.feed, feedOptions);
     const result = await scanSkills(dirs, feed);
     if (!args.json) {
         for (const d of result.installed) {

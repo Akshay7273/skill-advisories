@@ -1,14 +1,66 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import pc from "picocolors";
+import { isFresh, readCache, writeCache } from "./cache.js";
 export const DEFAULT_FEED_URL = "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json";
 /** Load the advisory feed from a URL (http/https) or a local file path. */
-export async function loadFeed(source = DEFAULT_FEED_URL) {
-    if (source.startsWith("http://") || source.startsWith("https://")) {
+export async function loadFeed(source = DEFAULT_FEED_URL, options = {}) {
+    if (!source.startsWith("http://") && !source.startsWith("https://")) {
+        return JSON.parse(await readFile(source, "utf8"));
+    }
+    if (options.offline) {
+        const cached = await readCache(source);
+        if (!cached) {
+            throw new Error(`offline mode: no cached feed available for ${source}`);
+        }
+        return JSON.parse(cached.body);
+    }
+    if (!options.refresh) {
+        const cached = await readCache(source);
+        if (cached && isFresh(cached)) {
+            return JSON.parse(cached.body);
+        }
+    }
+    try {
         const res = await fetch(source);
         if (!res.ok)
-            throw new Error(`failed to fetch feed: HTTP ${res.status}`);
-        return (await res.json());
+            throw new Error(`HTTP ${res.status}`);
+        const bodyText = await res.text();
+        try {
+            const digestRes = await fetch(`${source}.sha256`);
+            if (digestRes.ok) {
+                const digestText = await digestRes.text();
+                const expectedHash = digestText.trim().split(/\s+/)[0]?.toLowerCase();
+                const actualHash = createHash("sha256").update(bodyText).digest("hex").toLowerCase();
+                if (expectedHash && actualHash !== expectedHash) {
+                    console.error(pc.yellow("\u26a0 feed digest mismatch \u2014 feed may be tampered with or mid-update"));
+                    if (options.strict) {
+                        throw new Error("feed digest mismatch (strict mode)");
+                    }
+                }
+            }
+        }
+        catch (err) {
+            if (err instanceof Error && err.message.includes("strict mode")) {
+                throw err;
+            }
+            // digest fetch failed or unreachable: skip silently
+        }
+        await writeCache(source, bodyText);
+        return JSON.parse(bodyText);
     }
-    return JSON.parse(await readFile(source, "utf8"));
+    catch (err) {
+        if (err instanceof Error && err.message.includes("strict mode")) {
+            throw err;
+        }
+        const fallback = await readCache(source);
+        if (fallback) {
+            const dateStr = new Date(fallback.fetchedAt).toISOString();
+            console.error(pc.yellow(`\u26a0 network unavailable \u2014 using cached feed from ${dateStr}`));
+            return JSON.parse(fallback.body);
+        }
+        throw new Error(`failed to fetch feed: ${err instanceof Error ? err.message : String(err)}`);
+    }
 }
 /**
  * Find advisories whose artifacts match any of the given names

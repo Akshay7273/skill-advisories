@@ -1,4 +1,7 @@
+import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
+import pc from "picocolors"
+import { isFresh, readCache, writeCache } from "./cache.js"
 import type { Feed } from "./compile.js"
 import type { Advisory } from "./types.js"
 
@@ -7,14 +10,81 @@ export const DEFAULT_FEED_URL =
 
 export type Match = { query: string; advisory: Advisory; artifactNames: string[] }
 
+export type LoadFeedOptions = {
+  offline?: boolean
+  refresh?: boolean
+  strict?: boolean
+}
+
 /** Load the advisory feed from a URL (http/https) or a local file path. */
-export async function loadFeed(source: string = DEFAULT_FEED_URL): Promise<Feed> {
-  if (source.startsWith("http://") || source.startsWith("https://")) {
-    const res = await fetch(source)
-    if (!res.ok) throw new Error(`failed to fetch feed: HTTP ${res.status}`)
-    return (await res.json()) as Feed
+export async function loadFeed(
+  source: string = DEFAULT_FEED_URL,
+  options: LoadFeedOptions = {},
+): Promise<Feed> {
+  if (!source.startsWith("http://") && !source.startsWith("https://")) {
+    return JSON.parse(await readFile(source, "utf8")) as Feed
   }
-  return JSON.parse(await readFile(source, "utf8")) as Feed
+
+  if (options.offline) {
+    const cached = await readCache(source)
+    if (!cached) {
+      throw new Error(`offline mode: no cached feed available for ${source}`)
+    }
+    return JSON.parse(cached.body) as Feed
+  }
+
+  if (!options.refresh) {
+    const cached = await readCache(source)
+    if (cached && isFresh(cached)) {
+      return JSON.parse(cached.body) as Feed
+    }
+  }
+
+  try {
+    const res = await fetch(source)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const bodyText = await res.text()
+
+    try {
+      const digestRes = await fetch(`${source}.sha256`)
+      if (digestRes.ok) {
+        const digestText = await digestRes.text()
+        const expectedHash = digestText.trim().split(/\s+/)[0]?.toLowerCase()
+        const actualHash = createHash("sha256").update(bodyText).digest("hex").toLowerCase()
+        if (expectedHash && actualHash !== expectedHash) {
+          console.error(
+            pc.yellow(
+              "\u26a0 feed digest mismatch \u2014 feed may be tampered with or mid-update",
+            ),
+          )
+          if (options.strict) {
+            throw new Error("feed digest mismatch (strict mode)")
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("strict mode")) {
+        throw err
+      }
+      // digest fetch failed or unreachable: skip silently
+    }
+
+    await writeCache(source, bodyText)
+    return JSON.parse(bodyText) as Feed
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("strict mode")) {
+      throw err
+    }
+    const fallback = await readCache(source)
+    if (fallback) {
+      const dateStr = new Date(fallback.fetchedAt).toISOString()
+      console.error(
+        pc.yellow(`\u26a0 network unavailable \u2014 using cached feed from ${dateStr}`),
+      )
+      return JSON.parse(fallback.body) as Feed
+    }
+    throw new Error(`failed to fetch feed: ${err instanceof Error ? err.message : String(err)}`)
+  }
 }
 
 /**

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import pc from "picocolors"
 import { buildFeed } from "./compile.js"
@@ -28,8 +29,13 @@ try {
 }
 
 await mkdir("feed", { recursive: true })
-await writeFile("feed/feed.json", JSON.stringify(feed, null, 2) + "\n", "utf8")
+const feedContent = JSON.stringify(feed, null, 2) + "\n"
+await writeFile("feed/feed.json", feedContent, "utf8")
 await writeFile("feed/index.json", JSON.stringify(index, null, 2) + "\n", "utf8")
+
+const digest = createHash("sha256").update(feedContent).digest("hex")
+await writeFile("feed/feed.json.sha256", `${digest}  feed.json\n`, "utf8")
 
 console.log(pc.green(`\u2705 feed/feed.json written \u2014 ${feed.advisory_count} advisories (test entries excluded)`))
 console.log(pc.green(`\u2705 feed/index.json written \u2014 ${Object.keys(index).length} artifact keys`))
+console.log(pc.green(`\u2705 feed/feed.json.sha256 written \u2014 ${digest}`))
