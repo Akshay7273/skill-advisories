@@ -41,6 +41,8 @@
     "compile": "tsx src/compile-cli.ts",
     "build": "tsc && esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/action.js",
     "smoke": "node scripts/smoke-cli.mjs",
+    "benchmark": "npm run build && node scripts/benchmark.mjs",
+    "benchmark:ci": "npm run build && node scripts/benchmark.mjs --identities 100000 --artifacts 250 --max-lookup-ms 5000 --max-scan-ms 30000",
     "test": "vitest run",
     "prepublishOnly": "npm run build && npm test && npm run smoke"
   },
