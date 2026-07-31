@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-31
+
+### Added
+- OSV-compatible per-advisory exports with documented native field mapping
+- Advisory aliases for CVE, GHSA, and vendor identifiers
+- SHA-256 manifest covering native feeds, indexes, and OSV records
+- OIDC trusted-publishing workflow with npm and feed provenance attestations
+- Dependabot coverage for npm and GitHub Actions dependencies
+
+### Changed
+- Advisory validation rejects duplicate identities, versions, and hashes
+- GitHub workflows use the current Node 24-based official actions
+
 ## [0.3.0] - 2026-07-31
 
 ### Added

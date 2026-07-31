@@ -52,10 +52,10 @@ public CLI contract is covered by end-to-end tests.
 
 Make the feed independently consumable and resistant to tampering.
 
-- [ ] OSV-compatible export and documented field mapping
-- [ ] Advisory aliases for CVE, GHSA, and vendor identifiers
+- [x] OSV-compatible export and documented field mapping
+- [x] Advisory aliases for CVE, GHSA, and vendor identifiers
 - [ ] Structured evidence provenance and source archival metadata
-- [ ] Keyless Sigstore attestations for feed releases
+- [x] Keyless Sigstore attestations for feed releases
 - [ ] Feed freshness metadata and last-known-good rollback support
 - [ ] Automated checks for broken references and duplicate artifacts
 

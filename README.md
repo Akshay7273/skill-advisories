@@ -24,6 +24,10 @@ Consume the database directly — no install needed:
 - Feed SHA-256 digest: `https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json.sha256`
 - Fast lookup index (`ecosystem:name` → advisory ids): `https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/index.json`
 - Advisory schema: [`schema/advisory.schema.json`](schema/advisory.schema.json)
+- OSV-compatible index: [`feed/osv/index.json`](feed/osv/index.json)
+- Multi-file checksum manifest: [`feed/checksums.txt`](feed/checksums.txt)
+
+See the [OSV export and verification guide](docs/osv-export.md) for field mapping and integrity checks.
 
 ## CLI
 
