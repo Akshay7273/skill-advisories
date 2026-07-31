@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format is based on 
 - Reproducible synthetic benchmark harness with environment and commit metadata
 - CI performance regression ceilings and a checked-in 100,000-identity/10,000-artifact baseline
 - Weekly OpenSSF Scorecard analysis with SARIF code-scanning publication
+- CodeQL static analysis for JavaScript and TypeScript on pushes, pull requests, and a weekly schedule
 
 ### Fixed
 - Hash scans now use the actual installed directory when package metadata declares a different name
