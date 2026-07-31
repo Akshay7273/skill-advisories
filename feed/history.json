@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "entries": [
+    {
+      "cursor": "19f7bc9e0058e1977d05f0354847993a40ee2e98599154bc431a58963cf3f384",
+      "generated": "2026-07-31T21:10:29.393Z",
+      "advisory_count": 13,
+      "digest": "94b61c93e1b25062d4b8c2954557de591d3ebf82580f710e46f3c6c72114f3a0"
+    }
+  ]
+}
