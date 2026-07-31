@@ -19,7 +19,7 @@
   "scripts": {
     "validate": "tsx src/validate-cli.ts",
     "compile": "tsx src/compile-cli.ts",
-    "build": "tsc",
+    "build": "tsc && esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/action.js",
     "test": "vitest run",
     "prepublishOnly": "npm run build && npm test"
   },
@@ -44,8 +44,12 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "esbuild": "^0.28.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

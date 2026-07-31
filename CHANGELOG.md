@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Changed
 - Installed dependencies are no longer tracked in Git
+- The GitHub Action uses a self-contained runtime bundle
 
 ## [0.2.0] - 2026-07-22
 
