@@ -62,6 +62,39 @@ chrome, ads, and CSRF tokens. Treat a mismatch as a prompt to re-read the page
 and confirm the cited claim still holds, then restamp `retrieved` and
 `content_sha256` in the same commit.
 
+## Detecting rot
+
+Provenance records what a page said; it does not notice when the page goes away.
+A separate check probes every distinct `url` and `archive_url` in the feed:
+
+```bash
+npm run references:check
+```
+
+It writes `site/references.json` and prints a one-line summary. The result is
+also shown on the [feed health page](https://akshay7273.github.io/skill-advisories/health.html).
+Outcomes are reported in four kinds, because they call for different responses:
+
+| Status | Meaning | Response |
+| --- | --- | --- |
+| `ok` | Page answered | None |
+| `gone` | Permanent 404/410 | Re-source the evidence |
+| `blocked` | 401/403/429 | None — usually a CDN refusing a datacenter IP |
+| `unreachable` | Timeout, DNS failure, or 5xx | Re-check later |
+
+Only `gone` is treated as rot. The check runs weekly rather than per pull
+request, and its default exit code is 0 no matter what the network says, so a
+vendor blog being down for ten minutes never fails an unrelated change. The
+weekly workflow passes `--fail-on-gone` to turn a permanent 404/410 into a
+failed run.
+
+When a cited page is `gone`, find a live copy — the vendor's new URL, or an
+archived snapshot — and update the reference with a fresh `retrieved` stamp in
+the same commit. If no published evidence survives, the advisory no longer meets
+rule 1 of the [data integrity rules](../CONTRIBUTING.md#data-integrity-rules) and
+should be withdrawn using the
+[correction runbook](operations/correction.md).
+
 ## Consumers
 
 Native feed advisories carry the fields inline on each reference. OSV records

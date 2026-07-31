@@ -34,7 +34,8 @@ Consume the database directly — no install needed:
 
 See the [OSV export and verification guide](docs/osv-export.md) for field mapping and integrity checks.
 Incremental consumers should follow the [compact feed and delta protocol](docs/feed-updates.md).
-References may carry archival [evidence provenance](docs/evidence-provenance.md).
+References may carry archival [evidence provenance](docs/evidence-provenance.md), and
+every cited page is probed weekly for [link rot](docs/evidence-provenance.md#detecting-rot).
 
 ## CLI
 
