@@ -1,5 +1,7 @@
 name: pages
 on:
+  schedule:
+    - cron: "23 4 * * *"
   push:
     branches: [main]
     paths: ["feed/**", "scripts/build-site.mjs", ".github/workflows/pages.yml"]
@@ -19,7 +21,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
-      - run: node scripts/build-site.mjs
+      - run: npm run health:check
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

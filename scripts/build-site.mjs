@@ -1,9 +1,55 @@
+import { createHash } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 const feed = JSON.parse(await readFile("feed/feed.json", "utf8"))
+const checksumManifest = await readFile("feed/checksums.txt", "utf8")
 const outDir = "site"
 await mkdir(path.join(outDir, "advisory"), { recursive: true })
+
+const checksumEntries = checksumManifest
+	.trim()
+	.split("\n")
+	.map((line) => {
+		const match = line.match(/^([a-f0-9]{64})  (.+)$/)
+		if (!match || path.isAbsolute(match[2]) || match[2].split(/[\\/]/).includes("..")) {
+			throw new Error(`invalid checksum manifest entry: ${line}`)
+		}
+		return { expected: match[1], file: match[2] }
+	})
+const checksumResults = await Promise.all(
+	checksumEntries.map(async ({ expected, file }) => {
+		const actual = createHash("sha256")
+			.update(await readFile(path.join("feed", file)))
+			.digest("hex")
+		return { file, valid: actual === expected, expected, actual }
+	}),
+)
+const checkedAt = new Date()
+const feedAgeHours = (checkedAt.getTime() - new Date(feed.generated).getTime()) / 3_600_000
+const maxFeedAgeHours = Number(process.env.MAX_FEED_AGE_HOURS ?? 24 * 30)
+if (!Number.isFinite(feedAgeHours) || !Number.isFinite(maxFeedAgeHours) || maxFeedAgeHours < 1) {
+	throw new Error("invalid feed freshness timestamp or threshold")
+}
+const mismatches = checksumResults.filter(({ valid }) => !valid)
+const health = {
+	schemaVersion: "1",
+	status: mismatches.length === 0 && feedAgeHours <= maxFeedAgeHours ? "healthy" : "degraded",
+	checkedAt: checkedAt.toISOString(),
+	sourceCommit: process.env.GITHUB_SHA ?? "local",
+	feed: {
+		generated: feed.generated,
+		ageHours: Number(feedAgeHours.toFixed(2)),
+		maxAgeHours: maxFeedAgeHours,
+		advisoryCount: feed.advisory_count,
+	},
+	integrity: {
+		checkedFiles: checksumResults.length,
+		validFiles: checksumResults.length - mismatches.length,
+		mismatches: mismatches.map(({ file, expected, actual }) => ({ file, expected, actual })),
+	},
+}
+await writeFile(path.join(outDir, "health.json"), `${JSON.stringify(health, null, 2)}\n`)
 
 const esc = (s) =>
 	String(s ?? "").replace(
@@ -66,8 +112,19 @@ const rows = feed.advisories
 	.join("")
 const index = `<h1>skill-advisories</h1>
 <p>A public advisory database for the Claude Code / agent-skill ecosystem. ${feed.advisories.length} advisories.</p>
+<p>Feed status: <strong>${esc(health.status)}</strong> · ${health.integrity.validFiles}/${health.integrity.checkedFiles} checksums valid · <a href="health.html">details</a> · <a href="health.json">JSON</a></p>
 <input id="q" placeholder="Filter by id, name, or summary…">
 <table><tr><th>ID</th><th>Severity</th><th>Type</th><th>Summary</th></tr>${rows}</table>
 <script>document.getElementById("q").addEventListener("input",(e)=>{const q=e.target.value.toLowerCase();for(const tr of document.querySelectorAll("tr[data-search]"))tr.style.display=tr.dataset.search.includes(q)?"":"none"})</script>`
 await writeFile(path.join(outDir, "index.html"), page("skill-advisories", index))
-console.log(`site: ${feed.advisories.length} advisory pages + index written to ${outDir}/`)
+const healthBody = `<h1>Feed health</h1>
+<p>Status: <strong>${esc(health.status)}</strong></p>
+<table><tr><th>Checked</th><td>${esc(health.checkedAt)}</td></tr>
+<tr><th>Source commit</th><td><code>${esc(health.sourceCommit)}</code></td></tr>
+<tr><th>Feed generated</th><td>${esc(health.feed.generated)}</td></tr>
+<tr><th>Feed age</th><td>${esc(health.feed.ageHours)} hours (limit ${esc(health.feed.maxAgeHours)})</td></tr>
+<tr><th>Advisories</th><td>${esc(health.feed.advisoryCount)}</td></tr>
+<tr><th>Integrity</th><td>${esc(health.integrity.validFiles)}/${esc(health.integrity.checkedFiles)} files valid</td></tr></table>
+<p><a href="health.json">Machine-readable status</a> · <a href="index.html">Advisories</a></p>`
+await writeFile(path.join(outDir, "health.html"), page("Feed health", healthBody))
+console.log(`site: ${feed.advisories.length} advisory pages + index + ${health.status} health status written to ${outDir}/`)
