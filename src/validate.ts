@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import _Ajv2020 from "ajv/dist/2020.js"
 import _addFormats from "ajv-formats"
 import type { LoadedAdvisory } from "./load.js"
+import { findReferenceProblems } from "./references.js"
 
 // ajv and ajv-formats are CommonJS. Under module=NodeNext, TypeScript types
 // their default import as the module namespace, while Node/tsx resolve it to
@@ -15,7 +16,8 @@ const SCHEMA_URL = new URL("../schema/advisory.schema.json", import.meta.url)
 
 /**
  * Validate advisories against the JSON Schema, then enforce repo invariants:
- * filename matches id, ids are unique, modified is not earlier than published.
+ * filename matches id, ids are unique, modified is not earlier than published,
+ * artifacts are not repeated, and reference provenance is coherent.
  */
 export async function validateAdvisories(loaded: LoadedAdvisory[]): Promise<ValidationProblem[]> {
   const schema = JSON.parse(await readFile(SCHEMA_URL, "utf8"))
@@ -25,6 +27,9 @@ export async function validateAdvisories(loaded: LoadedAdvisory[]): Promise<Vali
 
   const problems: ValidationProblem[] = []
   const seen = new Set<string>()
+  // Reference checks assume a schema-valid shape, so only advisories that
+  // cleared the schema above are handed on.
+  const schemaValid: LoadedAdvisory[] = []
 
   for (const { file, advisory } of loaded) {
     if (!validate(advisory)) {
@@ -51,6 +56,8 @@ export async function validateAdvisories(loaded: LoadedAdvisory[]): Promise<Vali
       }
       artifacts.add(key)
     }
+    schemaValid.push({ file, advisory })
   }
+  problems.push(...findReferenceProblems(schemaValid))
   return problems
 }
