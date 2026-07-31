@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { cpus, tmpdir, totalmem } from "node:os"
 import path from "node:path"
 import process from "node:process"
 import { performance } from "node:perf_hooks"
-import { buildArtifactIndex, matchNames } from "../dist/lookup.js"
+import { buildArtifactIndex, collectKnownNames, matchNames } from "../dist/lookup.js"
 import { scanSkills } from "../dist/scan.js"
+import { findNearMatches } from "../dist/typosquat.js"
 
 const options = {
   identities: 100_000,
@@ -16,6 +17,7 @@ const options = {
   concurrency: 4,
   maxLookupMs: undefined,
   maxScanMs: undefined,
+  maxFalsePositiveMs: undefined,
   output: undefined,
 }
 
@@ -38,6 +40,7 @@ for (let index = 2; index < process.argv.length; index++) {
   else if (flag === "--concurrency") options.concurrency = integer(value, flag)
   else if (flag === "--max-lookup-ms") options.maxLookupMs = integer(value, flag)
   else if (flag === "--max-scan-ms") options.maxScanMs = integer(value, flag)
+  else if (flag === "--max-false-positive-ms") options.maxFalsePositiveMs = integer(value, flag)
   else if (flag === "--output") options.output = value
   else throw new Error(`unknown benchmark option: ${flag}`)
 }
@@ -70,6 +73,19 @@ const artifactIndex = buildArtifactIndex(feed)
 const lookupStart = performance.now()
 const lookupMatches = matchNames(feed, queries, { index: artifactIndex })
 const lookupDurationMs = performance.now() - lookupStart
+
+const publicFeed = JSON.parse(await readFile("feed/feed.json", "utf8"))
+const knownPublicNames = collectKnownNames(publicFeed)
+const benignNames = Array.from(
+  { length: options.identities },
+  (_, index) => `synthetic-benign-${index.toString(36).padStart(6, "0")}-fixture`,
+)
+const falsePositiveStart = performance.now()
+let falsePositiveWarnings = 0
+for (const name of benignNames) {
+  falsePositiveWarnings += findNearMatches(name, knownPublicNames).length
+}
+const falsePositiveDurationMs = performance.now() - falsePositiveStart
 
 const corpusPath = await mkdtemp(path.join(tmpdir(), "skill-advisories-benchmark-"))
 let scanDurationMs
@@ -121,6 +137,13 @@ const result = {
     identitiesPerSecond: Math.round(options.identities / (lookupDurationMs / 1000)),
     matches: lookupMatches.length,
   },
+  falsePositiveSweep: {
+    durationMs: Number(falsePositiveDurationMs.toFixed(3)),
+    identitiesPerSecond: Math.round(options.identities / (falsePositiveDurationMs / 1000)),
+    warnings: falsePositiveWarnings,
+    warningRate: falsePositiveWarnings / options.identities,
+    knownAdvisoryNames: knownPublicNames.length,
+  },
   filesystemScan: {
     durationMs: Number(scanDurationMs.toFixed(3)),
     artifactsPerSecond: Math.round(options.artifacts / (scanDurationMs / 1000)),
@@ -139,5 +162,14 @@ if (options.maxLookupMs !== undefined && lookupDurationMs > options.maxLookupMs)
 }
 if (options.maxScanMs !== undefined && scanDurationMs > options.maxScanMs) {
   process.stderr.write(`filesystem scan exceeded ${options.maxScanMs}ms regression ceiling\n`)
+  process.exitCode = 1
+}
+if (
+  options.maxFalsePositiveMs !== undefined &&
+  falsePositiveDurationMs > options.maxFalsePositiveMs
+) {
+  process.stderr.write(
+    `false-positive sweep exceeded ${options.maxFalsePositiveMs}ms regression ceiling\n`,
+  )
   process.exitCode = 1
 }
