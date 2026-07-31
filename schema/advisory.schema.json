@@ -13,6 +13,11 @@
       "pattern": "^SKA-[0-9]{4}-[0-9]{4}$",
       "description": "SKA-<year>-<sequence>. SKA-<year>-0000 is reserved for tooling tests."
     },
+    "aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 3 }
+    },
     "type": { "enum": ["malicious", "vulnerable", "typosquat", "compromised", "test"] },
     "summary": { "type": "string", "minLength": 10, "maxLength": 200 },
     "details": { "type": "string" },
@@ -35,8 +40,8 @@
           "ecosystem": { "enum": ["claude-skill", "claude-plugin", "clawhub", "mcp-server", "npm", "pypi", "vscode-extension", "github-action"] },
           "name": { "type": "string", "minLength": 1 },
           "publisher": { "type": "string" },
-          "versions": { "type": "array", "items": { "type": "string" } },
-          "sha256": { "type": "array", "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+          "versions": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+          "sha256": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
         }
       }
     },

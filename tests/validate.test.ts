@@ -30,4 +30,14 @@ describe("advisory validation", () => {
       ),
     ).toBe(true)
   })
+
+  it("rejects duplicate artifact identities within an advisory", async () => {
+    const loaded = await loadAdvisories("fixtures/valid")
+    loaded[0].advisory.artifacts.push({
+      ...loaded[0].advisory.artifacts[0],
+      name: loaded[0].advisory.artifacts[0].name.toUpperCase(),
+    })
+    const problems = await validateAdvisories(loaded)
+    expect(problems.some((p) => p.problem.includes("duplicate artifact"))).toBe(true)
+  })
 })

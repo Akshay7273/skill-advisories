@@ -43,6 +43,14 @@ export async function validateAdvisories(loaded: LoadedAdvisory[]): Promise<Vali
     if (Date.parse(advisory.modified) < Date.parse(advisory.published)) {
       problems.push({ file, problem: "modified is earlier than published" })
     }
+    const artifacts = new Set<string>()
+    for (const artifact of advisory.artifacts) {
+      const key = `${artifact.ecosystem}:${artifact.name.toLowerCase()}`
+      if (artifacts.has(key)) {
+        problems.push({ file, problem: `duplicate artifact ${key}` })
+      }
+      artifacts.add(key)
+    }
   }
   return problems
 }

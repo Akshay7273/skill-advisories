@@ -41,6 +41,7 @@ export type Artifact = {
 export type Advisory = {
   schema_version: "1"
   id: string
+  aliases?: string[]
   type: AdvisoryType
   summary: string
   details?: string
