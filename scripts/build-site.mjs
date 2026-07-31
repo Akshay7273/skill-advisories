@@ -32,6 +32,28 @@ if (!Number.isFinite(feedAgeHours) || !Number.isFinite(maxFeedAgeHours) || maxFe
 	throw new Error("invalid feed freshness timestamp or threshold")
 }
 const mismatches = checksumResults.filter(({ valid }) => !valid)
+
+/**
+ * Reference reachability comes from scripts/check-references.mjs, which is not
+ * part of the site build and needs the network. Surface the last report when one
+ * is sitting in the output directory and say so plainly when there is none, so
+ * the page still builds offline. A missing file is the normal case; a corrupt
+ * one is a bug and is left to throw.
+ */
+const referenceJson = await readFile(path.join(outDir, "references.json"), "utf8").catch(
+	(error) => {
+		if (error.code === "ENOENT") return null
+		throw error
+	},
+)
+const references =
+	referenceJson === null
+		? null
+		: (() => {
+				const report = JSON.parse(referenceJson)
+				return { checkedAt: report.checkedAt, ...report.summary }
+			})()
+
 const health = {
 	schemaVersion: "1",
 	status: mismatches.length === 0 && feedAgeHours <= maxFeedAgeHours ? "healthy" : "degraded",
@@ -48,6 +70,10 @@ const health = {
 		validFiles: checksumResults.length - mismatches.length,
 		mismatches: mismatches.map(({ file, expected, actual }) => ({ file, expected, actual })),
 	},
+	// Deliberately outside `status`. A vendor taking their blog down is not a
+	// defect in this feed's integrity, and degrading here would fail the very
+	// deploy that was about to publish the warning.
+	...(references ? { references } : {}),
 }
 await writeFile(path.join(outDir, "health.json"), `${JSON.stringify(health, null, 2)}\n`)
 
@@ -117,6 +143,21 @@ const index = `<h1>skill-advisories</h1>
 <table><tr><th>ID</th><th>Severity</th><th>Type</th><th>Summary</th></tr>${rows}</table>
 <script>document.getElementById("q").addEventListener("input",(e)=>{const q=e.target.value.toLowerCase();for(const tr of document.querySelectorAll("tr[data-search]"))tr.style.display=tr.dataset.search.includes(q)?"":"none"})</script>`
 await writeFile(path.join(outDir, "index.html"), page("skill-advisories", index))
+
+/**
+ * Report ok separately from the three failure kinds. "7 reachable" and "5
+ * reachable, 2 gone" are different situations, and collapsing them into a
+ * fraction hides which pages need re-sourcing and which are just having a bad
+ * day behind a CDN.
+ */
+const referenceSummary = references
+	? [
+			`${esc(references.ok)}/${esc(references.checked)} reachable`,
+			...["gone", "blocked", "unreachable"]
+				.filter((kind) => references[kind] > 0)
+				.map((kind) => `${esc(references[kind])} ${kind}`),
+		].join(" · ") + ` <small>(checked ${esc(references.checkedAt)})</small>`
+	: "not checked in this build"
 const healthBody = `<h1>Feed health</h1>
 <p>Status: <strong>${esc(health.status)}</strong></p>
 <table><tr><th>Checked</th><td>${esc(health.checkedAt)}</td></tr>
@@ -124,7 +165,8 @@ const healthBody = `<h1>Feed health</h1>
 <tr><th>Feed generated</th><td>${esc(health.feed.generated)}</td></tr>
 <tr><th>Feed age</th><td>${esc(health.feed.ageHours)} hours (limit ${esc(health.feed.maxAgeHours)})</td></tr>
 <tr><th>Advisories</th><td>${esc(health.feed.advisoryCount)}</td></tr>
-<tr><th>Integrity</th><td>${esc(health.integrity.validFiles)}/${esc(health.integrity.checkedFiles)} files valid</td></tr></table>
+<tr><th>Integrity</th><td>${esc(health.integrity.validFiles)}/${esc(health.integrity.checkedFiles)} files valid</td></tr>
+<tr><th>Cited references</th><td>${referenceSummary}</td></tr></table>
 <p><a href="health.json">Machine-readable status</a> · <a href="index.html">Advisories</a></p>`
 await writeFile(path.join(outDir, "health.html"), page("Feed health", healthBody))
 console.log(`site: ${feed.advisories.length} advisory pages + index + ${health.status} health status written to ${outDir}/`)
