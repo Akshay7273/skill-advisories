@@ -41,6 +41,7 @@
     "compile": "tsx src/compile-cli.ts",
     "site": "node scripts/build-site.mjs",
     "health:check": "npm run site && node scripts/check-health.mjs",
+    "ops:check": "node scripts/check-runbooks.mjs",
     "build": "tsc && esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/action.js",
     "smoke": "node scripts/smoke-cli.mjs",
     "benchmark": "npm run build && node scripts/benchmark.mjs",
