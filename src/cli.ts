@@ -2,6 +2,8 @@
 import { createRequire } from "node:module"
 import pc from "picocolors"
 import type { Feed } from "./compile.js"
+import { describeFreshness, evaluateFreshness } from "./freshness.js"
+import type { Freshness } from "./freshness.js"
 import { DEFAULT_FEED_URL, collectKnownNames, loadFeed, matchHashes, matchNames } from "./lookup.js"
 import { ECOSYSTEMS } from "./types.js"
 import type { Advisory, Ecosystem } from "./types.js"
@@ -38,10 +40,12 @@ Options:
   --max-total-bytes <n> Hash at most this many bytes per artifact (default: 268435456)
   --exclude-dir <name> Skip an exact directory basename; may be repeated
   --allow-incomplete Continue when files exceed budgets or cannot be read
+  --max-feed-age <hours> Warn when the feed is older than this (default: 48);
+                   exit code 2 instead of a warning under --strict
   --help, -h       Show this help
   --version, -v    Show version
 
-Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage or feed error`
+Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage, feed, or incomplete-evidence error`
 
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`))
@@ -67,6 +71,7 @@ type ParsedArgs = {
   maxTotalBytes?: number
   excludeDirectories: string[]
   allowIncomplete: boolean
+  maxFeedAgeHours?: number
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -87,6 +92,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let maxTotalBytes: number | undefined
   const excludeDirectories: string[] = []
   let allowIncomplete = false
+  let maxFeedAgeHours: number | undefined
 
   const VALID_FORMATS = ["human", "json", "sarif"]
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"]
@@ -163,6 +169,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       excludeDirectories.push(value)
     } else if (arg === "--allow-incomplete") {
       allowIncomplete = true
+    } else if (arg === "--max-feed-age") {
+      maxFeedAgeHours = readInteger(arg)
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP)
       process.exit(0)
@@ -200,6 +208,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     maxTotalBytes,
     excludeDirectories,
     allowIncomplete,
+    maxFeedAgeHours,
   }
 }
 
@@ -223,6 +232,7 @@ function report(
   failOn?: string,
   scanStats?: ScanStats,
   allowIncomplete = false,
+  freshness?: Freshness,
 ): void {
   if (format === "sarif") {
     const findings: SarifFinding[] = matches.map((m) => ({
@@ -263,12 +273,16 @@ function report(
             distance: w.distance,
           })),
           ...(scanStats ? { scan: scanStats } : {}),
+          ...(freshness ? { feedAge: freshness } : {}),
         },
         null,
         2,
       ),
     )
   } else {
+    if (freshness && freshness.status !== "fresh") {
+      console.error(pc.yellow(`\u26a0 ${describeFreshness(freshness)}`))
+    }
     if (
       scanStats &&
       (scanStats.skippedLargeFiles > 0 ||
@@ -326,7 +340,12 @@ function report(
     (scanStats.skippedLargeFiles > 0 ||
       scanStats.skippedBudgetFiles > 0 ||
       scanStats.unreadableEntries > 0)
-  process.exitCode = scanIncomplete && !allowIncomplete
+  // A stale feed is an operational fault, not an advisory finding: the data
+  // could not be shown to be current, so it joins the exit-2 family rather
+  // than reporting a match that was never made. Warn-only by default so an
+  // offline run does not start failing builds on its own.
+  const feedNotCurrent = freshness !== undefined && freshness.status !== "fresh"
+  process.exitCode = (scanIncomplete && !allowIncomplete) || (feedNotCurrent && strict)
     ? 2
     : triggerFailure || (strict && hasWarnings)
       ? 1
@@ -356,6 +375,7 @@ if (args.command === "check") {
   }
   if (args.positionals.length === 0) fail("check requires at least one skill name or hash")
   const feed = await loadFeedOrFail(args.feed, feedOptions)
+  const freshness = evaluateFreshness(feed, { maxAgeHours: args.maxFeedAgeHours })
 
   if (args.sha256) {
     if (args.ecosystem) fail("--ecosystem cannot be combined with --sha256")
@@ -385,7 +405,17 @@ if (args.command === "check") {
         }
       }
     }
-    report(args.positionals.length, matches, [], args.format, args.strict, args.failOn)
+    report(
+      args.positionals.length,
+      matches,
+      [],
+      args.format,
+      args.strict,
+      args.failOn,
+      undefined,
+      false,
+      freshness,
+    )
   } else {
     const nameHits = matchNames(feed, args.positionals, {
       ecosystem: args.ecosystem,
@@ -417,12 +447,23 @@ if (args.command === "check") {
       }
     }
 
-    report(args.positionals.length, matches, warnings, args.format, args.strict, args.failOn)
+    report(
+      args.positionals.length,
+      matches,
+      warnings,
+      args.format,
+      args.strict,
+      args.failOn,
+      undefined,
+      false,
+      freshness,
+    )
   }
 } else if (args.command === "scan") {
   if (args.version) fail("--version is only supported by the check command")
   const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs()
   const feed = await loadFeedOrFail(args.feed, feedOptions)
+  const freshness = evaluateFreshness(feed, { maxAgeHours: args.maxFeedAgeHours })
   const result = await scanSkills(dirs, feed, {
     ecosystem: args.ecosystem,
     concurrency: args.scanConcurrency,
@@ -453,6 +494,7 @@ if (args.command === "check") {
     args.failOn,
     result.stats,
     args.allowIncomplete,
+    freshness,
   )
 } else {
   fail(`unknown command "${args.command}"`)

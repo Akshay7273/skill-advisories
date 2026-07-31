@@ -86,8 +86,40 @@ try {
     "--json",
   ])
   assert.equal(allowed.status, 0, allowed.stderr)
+
+  // A feed dated well past --max-feed-age must be reported but must not fail a
+  // build on its own; only --strict promotes staleness to an exit code.
+  const staleFeedPath = path.join(scanRoot, "stale-feed.json")
+  const staleFeed = JSON.parse(readFileSync(path.join(root, "feed", "feed.json"), "utf8"))
+  staleFeed.generated = new Date(Date.now() - 240 * 60 * 60 * 1000).toISOString()
+  writeFileSync(staleFeedPath, JSON.stringify(staleFeed))
+
+  const staleWarn = run(["check", "rankaj", "--feed", staleFeedPath, "--json"])
+  assert.equal(staleWarn.status, 1, staleWarn.stderr)
+  const staleResult = JSON.parse(staleWarn.stdout)
+  assert.equal(staleResult.feedAge.status, "stale")
+  assert.equal(staleResult.feedAge.maxAgeHours, 48)
+  assert.ok(staleResult.feedAge.ageHours >= 240)
+
+  const staleStrict = run(["check", "omnicog", "--feed", staleFeedPath, "--strict", "--json"])
+  assert.equal(staleStrict.status, 2, staleStrict.stderr)
+
+  const staleTolerated = run([
+    "check",
+    "omnicog",
+    "--feed",
+    staleFeedPath,
+    "--strict",
+    "--max-feed-age",
+    "480",
+    "--json",
+  ])
+  assert.notEqual(staleTolerated.status, 2)
+  assert.equal(JSON.parse(staleTolerated.stdout).feedAge.status, "fresh")
 } finally {
   rmSync(scanRoot, { recursive: true, force: true })
 }
 
-console.log("cli smoke: version, detection, validation, and bounded scan paths passed")
+console.log(
+  "cli smoke: version, detection, validation, bounded scan, and feed freshness paths passed",
+)
