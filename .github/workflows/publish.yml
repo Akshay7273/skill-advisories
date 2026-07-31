@@ -1,0 +1,53 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build and publish (for example v0.4.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  publish:
+    if: github.repository == 'Akshay7273/skill-advisories'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run validate
+      - run: npm test
+      - run: npm run build
+      - run: npm run smoke
+      - name: Verify generated feeds are committed
+        run: |
+          npm run compile
+          git diff --exit-code feed/
+      - name: Pack release artifact
+        id: pack
+        shell: bash
+        run: |
+          path=$(npm pack --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].filename))')
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+      - name: Attest npm package
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: ${{ steps.pack.outputs.path }}
+      - name: Attest feed checksum manifest
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: feed/checksums.txt
+      - name: Publish to npm with provenance
+        run: npm publish "${{ steps.pack.outputs.path }}" --access public
