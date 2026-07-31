@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Akshay7273/skill-advisories/actions/workflows/ci.yml/badge.svg)](https://github.com/Akshay7273/skill-advisories/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/%40akshay7273%2Fskill-advisories)](https://www.npmjs.com/package/@akshay7273/skill-advisories)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Akshay7273/skill-advisories/badge)](https://scorecard.dev/viewer/?uri=github.com/Akshay7273/skill-advisories)
 [![advisories](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FAkshay7273%2Fskill-advisories%2Fmain%2Ffeed%2Ffeed.json&query=%24.advisory_count&label=advisories&color=red)](https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json)
 
 Open advisory database for AI agent skills, plugins, and MCP servers — OSV-style, machine-readable threat data for the agent ecosystem.
