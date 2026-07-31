@@ -142,8 +142,9 @@ Inputs: `names` (space-separated skill names), `scan-dir` (directory to scan), `
 
 Performance results are generated from a deterministic synthetic corpus and
 record the exact commit and environment. On the checked-in Windows/Node 24
-baseline, 100,000 name lookups completed in 74 ms and 10,000 one-file artifacts
-were scanned in 10.12 seconds with 169 MB peak RSS. This is a reproducible
+baseline, 100,000 name lookups completed in 125 ms, a 100,000-name synthetic
+false-positive sweep produced zero warnings in 479 ms, and 10,000 one-file
+artifacts were scanned in 10.36 seconds with 214 MB peak RSS. This is a reproducible
 baseline, not a guarantee for other hardware or real-world artifact layouts.
 
 See the [benchmark method and results](benchmarks/README.md). Accuracy claims

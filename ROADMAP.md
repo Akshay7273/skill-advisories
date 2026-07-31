@@ -83,7 +83,7 @@ decision with cited evidence, and enforce a repository-owned security policy.
 - [x] Published performance benchmark harness with synthetic release corpora
 - [x] Service-health and feed-freshness status page
 - [x] Maintainer runbooks for triage, release, correction, and incident response
-- [ ] Automated release notes and signed npm provenance
+- [x] Automated release notes and signed npm provenance
 - [ ] OpenSSF Scorecard reporting and remediated high-impact findings
 - [x] Runnable reference integrations for at least three agent ecosystems
 - [ ] One independently verifiable downstream integration or pilot

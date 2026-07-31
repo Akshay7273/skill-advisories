@@ -38,7 +38,10 @@
   "files": [
     "dist",
     "schema",
-    "feed"
+    "feed",
+    "docs",
+    "examples",
+    "integrations"
   ],
   "scripts": {
     "validate": "tsx src/validate-cli.ts",
