@@ -132,7 +132,15 @@ Inputs: `names` (space-separated skill names), `scan-dir` (directory to scan), `
 
 ## Accuracy & performance
 
-Benchmarked on a stock VPS (Node 22): scanning **10,000 installed skills** (7,517 real community skills harvested from public collections, scaled to 10,000 with copies) completes in **1.86 seconds**, including the remote feed fetch. In the same corpus, a planted known-bad skill at position 10,002 was **flagged in under a second**. A full recall audit detects **all 36 advisory artifacts**, including case variants; since v0.2.0, file-hash matching also catches renamed copies. A false-positive sweep across **2,656 unique real-world skill names** — drawn from the anthropics/skills, alirezarezvani/claude-skills, K-Dense scientific skills, and other public collections — produced **zero matches**.
+Performance results are generated from a deterministic synthetic corpus and
+record the exact commit and environment. On the checked-in Windows/Node 24
+baseline, 100,000 name lookups completed in 74 ms and 10,000 one-file artifacts
+were scanned in 10.12 seconds with 169 MB peak RSS. This is a reproducible
+baseline, not a guarantee for other hardware or real-world artifact layouts.
+
+See the [benchmark method and results](benchmarks/README.md). Accuracy claims
+require a redistributable corpus or a documented generator; downloads and
+unpublished third-party collections are not used as evidence.
 
 ## License
 

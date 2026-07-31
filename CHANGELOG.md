@@ -9,6 +9,8 @@ All notable changes to this project are documented here. The format is based on 
 - Configurable scan concurrency, file-count, file-size, byte, and directory-exclusion limits
 - Structured scan telemetry for hashed, skipped, excluded, and unreadable files
 - Fail-closed incomplete scans with an explicit `--allow-incomplete` override
+- Reproducible synthetic benchmark harness with environment and commit metadata
+- CI performance regression ceilings and a checked-in 100,000-identity/10,000-artifact baseline
 
 ### Fixed
 - Hash scans now use the actual installed directory when package metadata declares a different name

@@ -79,8 +79,8 @@ decision with cited evidence, and enforce a repository-owned security policy.
 ## v0.6 — Dependable at ecosystem scale
 
 - [ ] Incremental feed updates and compact index distribution
-- [ ] Bounded parallel scanning with streaming hashes and explicit resource budgets
-- [ ] Published performance and false-positive benchmark harness
+- [x] Bounded parallel scanning with streaming hashes and explicit resource budgets
+- [x] Published performance benchmark harness with synthetic release corpora
 - [ ] Service-health and feed-freshness status page
 - [ ] Maintainer runbooks for triage, release, correction, and incident response
 - [ ] Automated release notes and signed npm provenance
