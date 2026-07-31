@@ -48,6 +48,11 @@ strong application would link to:
 5. external advisory submissions or integration contributions; and
 6. an OpenSSF Scorecard report with remediated findings.
 
+The public [downstream pilot issue](https://github.com/Akshay7273/skill-advisories/issues/12)
+is the intake point for independently verifiable integrations. A comment or
+download is not sufficient: accepted evidence requires a public integration
+link and maintainer consent.
+
 ## Reporting rules
 
 - Keep source links and collection dates for every adoption claim.

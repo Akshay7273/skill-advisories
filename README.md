@@ -9,6 +9,8 @@ Open advisory database for AI agent skills, plugins, and MCP servers — OSV-sty
 
 **Browse advisories:** https://akshay7273.github.io/skill-advisories/
 
+**Feed health:** https://akshay7273.github.io/skill-advisories/health.html
+
 Every advisory documents a malicious, vulnerable, or typosquatted agent skill, backed by at least one published public reference (vendor report, researcher writeup, or registry takedown).
 
 ## Roadmap
@@ -90,6 +92,8 @@ The server provides `check_artifact`, `get_advisory`, and
 `search_advisories`. A repository can add `--policy examples/policy.json` to
 enforce severity thresholds, denied ecosystems, immutable hashes, and warning
 handling. See the [MCP, policy, and Claude Code integration guide](docs/mcp.md).
+OpenClaw, VS Code, and GitHub Action examples are covered by the
+[integration contract](docs/integrations.md).
 
 ## GitHub Action
 

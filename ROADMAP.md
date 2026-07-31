@@ -81,11 +81,11 @@ decision with cited evidence, and enforce a repository-owned security policy.
 - [ ] Incremental feed updates and compact index distribution
 - [x] Bounded parallel scanning with streaming hashes and explicit resource budgets
 - [x] Published performance benchmark harness with synthetic release corpora
-- [ ] Service-health and feed-freshness status page
-- [ ] Maintainer runbooks for triage, release, correction, and incident response
+- [x] Service-health and feed-freshness status page
+- [x] Maintainer runbooks for triage, release, correction, and incident response
 - [ ] Automated release notes and signed npm provenance
 - [ ] OpenSSF Scorecard reporting and remediated high-impact findings
-- [ ] Runnable reference integrations for at least three agent ecosystems
+- [x] Runnable reference integrations for at least three agent ecosystems
 - [ ] One independently verifiable downstream integration or pilot
 
 **Exit criteria:** resource usage and performance are reproducibly measured at

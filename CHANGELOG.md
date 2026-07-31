@@ -13,6 +13,10 @@ All notable changes to this project are documented here. The format is based on 
 - CI performance regression ceilings and a checked-in 100,000-identity/10,000-artifact baseline
 - Weekly OpenSSF Scorecard analysis with SARIF code-scanning publication
 - CodeQL static analysis for JavaScript and TypeScript on pushes, pull requests, and a weekly schedule
+- Synthetic false-positive sweep against every committed advisory identity
+- Daily machine-readable and human feed health with checksum and freshness verification
+- Tested runbooks for triage, correction, release, compromise response, and feed rollback
+- Tested OpenClaw/ClawHub and VS Code MCP integrations with a documented compatibility contract
 
 ### Fixed
 - Hash scans now use the actual installed directory when package metadata declares a different name
