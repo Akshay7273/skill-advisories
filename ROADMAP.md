@@ -76,17 +76,22 @@ Put safety checks directly in the workflows where agents acquire capabilities.
 **Exit criteria:** an agent can check an artifact before installation, explain a
 decision with cited evidence, and enforce a repository-owned security policy.
 
-## v0.6 — Scale and operations
+## v0.6 — Dependable at ecosystem scale
 
 - [ ] Incremental feed updates and compact index distribution
-- [ ] Parallel scanning with memory and file-size budgets
+- [ ] Bounded parallel scanning with streaming hashes and explicit resource budgets
 - [ ] Published performance and false-positive benchmark harness
 - [ ] Service-health and feed-freshness status page
 - [ ] Maintainer runbooks for triage, release, correction, and incident response
 - [ ] Automated release notes and signed npm provenance
+- [ ] OpenSSF Scorecard reporting and remediated high-impact findings
+- [ ] Runnable reference integrations for at least three agent ecosystems
+- [ ] One independently verifiable downstream integration or pilot
 
-**Exit criteria:** 100,000 installed artifacts can be evaluated within a normal
-CI budget, and every release or data incident has a tested maintainer procedure.
+**Exit criteria:** resource usage and performance are reproducibly measured at
+100,000 identities and 10,000 generated filesystem artifacts; every release or
+data incident has a tested maintainer procedure; and at least one downstream
+adopter can be cited publicly. See the [v0.6 release contract](docs/v0.6-plan.md).
 
 ## v1.0 — Stable public infrastructure
 
@@ -107,6 +112,9 @@ work, the project will:
 - collaborate with registries, security researchers, and agent-tool authors;
 - report advisory coverage, false-positive results, and feed usage openly; and
 - prefer integrations and documented APIs over project-specific lock-in.
+
+Eligibility signals and adoption evidence are tracked transparently in the
+[Claude for Open Source readiness document](docs/claude-oss-readiness.md).
 
 ## Proposing changes
 
