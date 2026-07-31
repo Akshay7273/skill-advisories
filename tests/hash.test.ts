@@ -41,13 +41,16 @@ describe("hashSkillDir", () => {
 			{ file: path.join("scripts", "run.sh"), sha256: digest("payload") },
 		])
 	})
-	it("skips broken symlinks without throwing", async () => {
-		const dir = await mkdtemp(path.join(tmpdir(), "ska-"))
-		await writeFile(path.join(dir, "SKILL.md"), "ok")
-		await symlink("/nonexistent-target", path.join(dir, "broken"))
-		const hashed = await hashSkillDir(dir)
-		expect(hashed.map((h) => h.file)).toEqual(["SKILL.md"])
-	})
+	it.skipIf(process.platform === "win32")(
+		"skips broken symlinks without throwing",
+		async () => {
+			const dir = await mkdtemp(path.join(tmpdir(), "ska-"))
+			await writeFile(path.join(dir, "SKILL.md"), "ok")
+			await symlink("/nonexistent-target", path.join(dir, "broken"))
+			const hashed = await hashSkillDir(dir)
+			expect(hashed.map((h) => h.file)).toEqual(["SKILL.md"])
+		},
+	)
 })
 
 describe("matchHashes", () => {

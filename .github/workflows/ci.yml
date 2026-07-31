@@ -7,12 +7,26 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    name: Verify (${{ matrix.os }}, Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: 20
+          - os: ubuntu-latest
+            node: 22
+          - os: windows-latest
+            node: 20
+          - os: macos-latest
+            node: 20
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
+          cache: npm
       - run: npm ci
       - run: npm run validate
       - run: npm test
