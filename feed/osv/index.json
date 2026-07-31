@@ -1,0 +1,57 @@
+{
+  "schema_version": "1",
+  "advisories": [
+    {
+      "id": "SKA-2026-0001",
+      "path": "osv/SKA-2026-0001.json"
+    },
+    {
+      "id": "SKA-2026-0002",
+      "path": "osv/SKA-2026-0002.json"
+    },
+    {
+      "id": "SKA-2026-0003",
+      "path": "osv/SKA-2026-0003.json"
+    },
+    {
+      "id": "SKA-2026-0004",
+      "path": "osv/SKA-2026-0004.json"
+    },
+    {
+      "id": "SKA-2026-0005",
+      "path": "osv/SKA-2026-0005.json"
+    },
+    {
+      "id": "SKA-2026-0006",
+      "path": "osv/SKA-2026-0006.json"
+    },
+    {
+      "id": "SKA-2026-0007",
+      "path": "osv/SKA-2026-0007.json"
+    },
+    {
+      "id": "SKA-2026-0008",
+      "path": "osv/SKA-2026-0008.json"
+    },
+    {
+      "id": "SKA-2026-0009",
+      "path": "osv/SKA-2026-0009.json"
+    },
+    {
+      "id": "SKA-2026-0010",
+      "path": "osv/SKA-2026-0010.json"
+    },
+    {
+      "id": "SKA-2026-0011",
+      "path": "osv/SKA-2026-0011.json"
+    },
+    {
+      "id": "SKA-2026-0012",
+      "path": "osv/SKA-2026-0012.json"
+    },
+    {
+      "id": "SKA-2026-0013",
+      "path": "osv/SKA-2026-0013.json"
+    }
+  ]
+}

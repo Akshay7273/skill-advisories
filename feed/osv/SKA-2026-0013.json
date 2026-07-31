@@ -1,0 +1,71 @@
+{
+  "id": "SKA-2026-0013",
+  "summary": "Evasive malicious skills identified by Unit42 on ClawHub: santi-text-game, letssendit, pdfcheck, update, and wistec-core (publisher accounts banned).",
+  "details": "Listed in the Publisher/Skill indicators of compromise from Unit42's February-May 2026 analysis of persistent and evasive malicious skills on ClawHub that evaded ClawScan and VirusTotal screening. Unit42 reported the skills for takedown; OpenClaw banned the accounts and deleted the skills. Unit42 redacted the publisher names.",
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "santi-text-game"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub"
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "letssendit"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub"
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "pdfcheck"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub"
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "update"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub"
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "wistec-core"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub"
+      }
+    }
+  ],
+  "references": [
+    {
+      "type": "REPORT",
+      "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+    }
+  ],
+  "database_specific": {
+    "type": "malicious",
+    "severity": "high",
+    "behaviors": [
+      "malware-dropper"
+    ],
+    "credits": [
+      "Unit42, Palo Alto Networks"
+    ],
+    "source": "https://github.com/Akshay7273/skill-advisories"
+  }
+}

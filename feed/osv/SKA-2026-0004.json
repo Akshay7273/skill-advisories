@@ -1,0 +1,62 @@
+{
+  "id": "SKA-2026-0004",
+  "summary": "ClawHub user Aslaep123 published malicious crypto-trading skills (base-agent, bybit-agent, polymarket-trading-bot) targeting credential theft from traders.",
+  "details": "Snyk's ToxicSkills audit identified multiple malicious skills by Aslaep123 targeting crypto/trading use cases, high-value targets for credential theft; base-agent and bybit-agent remained publicly available on clawhub.ai at publication. Antiy CERT's incident timeline records polymarket-trading-bot v1.0.1 by aslaep123 as the first malicious skill of the ClawHavoc wave, with base-agent v1.0.0 and bybit-agent v1.0.0 following in the subsequent days.",
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "base-agent"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub",
+        "publisher": "Aslaep123"
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "bybit-agent"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub",
+        "publisher": "Aslaep123"
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "polymarket-trading-bot"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub",
+        "publisher": "Aslaep123"
+      }
+    }
+  ],
+  "references": [
+    {
+      "type": "REPORT",
+      "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+    }
+  ],
+  "database_specific": {
+    "type": "malicious",
+    "severity": "critical",
+    "behaviors": [
+      "credential-theft",
+      "crypto-theft"
+    ],
+    "credits": [
+      "Snyk Security Labs",
+      "Antiy CERT"
+    ],
+    "source": "https://github.com/Akshay7273/skill-advisories"
+  }
+}

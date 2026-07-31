@@ -1,0 +1,46 @@
+{
+  "id": "SKA-2026-0005",
+  "summary": "Skills moltbookagent and publish-dist by pepe276 embed Unicode-obfuscated prompt injection and DAN-style jailbreaks targeting agent safety mechanisms.",
+  "details": "Snyk's ToxicSkills audit found these skills use Unicode contraband injection (invisible/obfuscated characters) combined with DAN-style jailbreak prompts to bypass agent safety constraints. Both remained publicly available on clawhub.ai at the time of Snyk's publication.",
+  "published": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-22T00:00:00Z",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "moltbookagent"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub",
+        "publisher": "pepe276"
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "ClawHub",
+        "name": "publish-dist"
+      },
+      "database_specific": {
+        "native_ecosystem": "clawhub",
+        "publisher": "pepe276"
+      }
+    }
+  ],
+  "references": [
+    {
+      "type": "REPORT",
+      "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+    }
+  ],
+  "database_specific": {
+    "type": "malicious",
+    "severity": "high",
+    "behaviors": [
+      "prompt-injection"
+    ],
+    "credits": [
+      "Snyk Security Labs"
+    ],
+    "source": "https://github.com/Akshay7273/skill-advisories"
+  }
+}
