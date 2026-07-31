@@ -10,6 +10,12 @@ Open advisory database for AI agent skills, plugins, and MCP servers — OSV-sty
 
 Every advisory documents a malicious, vulnerable, or typosquatted agent skill, backed by at least one published public reference (vendor report, researcher writeup, or registry takedown).
 
+## Roadmap
+
+The project is moving toward precise version-aware detection, verifiable threat
+feeds, OSV interoperability, and agent-native pre-install checks through MCP.
+See the [public roadmap](ROADMAP.md) for milestones and acceptance criteria.
+
 ## The feed (public API)
 
 Consume the database directly — no install needed:
