@@ -6,6 +6,7 @@ import { ECOSYSTEMS } from "./types.js"
 
 export const AdvisoryPolicySchema = z
   .object({
+    $schema: z.string().url().optional(),
     schemaVersion: z.literal("1"),
     failOn: z.enum(["low", "medium", "high", "critical"]).default("high"),
     deniedEcosystems: z.array(z.enum(ECOSYSTEMS)).default([]),

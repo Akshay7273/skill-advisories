@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/schema/policy.schema.json",
+  "schemaVersion": "1",
+  "failOn": "high",
+  "deniedEcosystems": [],
+  "requireHash": false,
+  "warnings": "review"
+}

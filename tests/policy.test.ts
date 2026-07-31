@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { ArtifactAssessment } from "../src/intelligence.js"
-import { evaluatePolicy, parsePolicy } from "../src/policy.js"
+import { evaluatePolicy, loadPolicy, parsePolicy } from "../src/policy.js"
 
 const safeAssessment: ArtifactAssessment = {
   status: "no-known-advisory",
@@ -11,6 +11,13 @@ const safeAssessment: ArtifactAssessment = {
 }
 
 describe("advisory policy", () => {
+  it("loads the checked-in reference policy", async () => {
+    await expect(loadPolicy("examples/policy.json")).resolves.toMatchObject({
+      schemaVersion: "1",
+      failOn: "high",
+    })
+  })
+
   it("applies safe defaults and rejects unknown keys", () => {
     expect(parsePolicy({ schemaVersion: "1" })).toEqual({
       schemaVersion: "1",
