@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-31
+
+### Added
+- Read-only MCP server with artifact checks, advisory retrieval, and search tools
+- Explainable artifact assessment API with structured evidence and safe disclaimers
+- Repository-owned policy files for severity, ecosystem, hash, and warning controls
+- Claude Code MCP configuration and fail-closed pre-install hook examples
+- Public package entry points for lookup, intelligence, policy, and MCP consumers
+- Protocol-level MCP tests using an in-memory client/server transport
+
 ## [0.4.0] - 2026-07-31
 
 ### Added
