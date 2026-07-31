@@ -78,7 +78,7 @@ decision with cited evidence, and enforce a repository-owned security policy.
 
 ## v0.6 — Dependable at ecosystem scale
 
-- [ ] Incremental feed updates and compact index distribution
+- [x] Incremental feed updates and compact index distribution
 - [x] Bounded parallel scanning with streaming hashes and explicit resource budgets
 - [x] Published performance benchmark harness with synthetic release corpora
 - [x] Service-health and feed-freshness status page

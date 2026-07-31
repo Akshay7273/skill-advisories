@@ -5,6 +5,7 @@ import { buildFeed } from "./compile.js";
 import { loadAdvisories } from "./load.js";
 import { validateAdvisories } from "./validate.js";
 import { toOsv } from "./osv.js";
+import { buildCompactFeed, buildFeedDelta, feedCursor } from "./delta.js";
 const dir = process.argv[2] ?? "advisories";
 const loaded = await loadAdvisories(dir);
 const problems = await validateAdvisories(loaded);
@@ -13,11 +14,12 @@ if (problems.length > 0) {
     process.exit(1);
 }
 const { feed, index } = buildFeed(loaded.map((l) => l.advisory));
+let previousFeed;
 try {
     const existingRaw = await readFile("feed/feed.json", "utf8");
-    const existingFeed = JSON.parse(existingRaw);
-    if (JSON.stringify(existingFeed.advisories) === JSON.stringify(feed.advisories)) {
-        feed.generated = existingFeed.generated;
+    previousFeed = JSON.parse(existingRaw);
+    if (JSON.stringify(previousFeed.advisories) === JSON.stringify(feed.advisories)) {
+        feed.generated = previousFeed.generated;
     }
 }
 catch {
@@ -27,6 +29,20 @@ await mkdir("feed", { recursive: true });
 const feedContent = JSON.stringify(feed, null, 2) + "\n";
 await writeFile("feed/feed.json", feedContent, "utf8");
 await writeFile("feed/index.json", JSON.stringify(index, null, 2) + "\n", "utf8");
+const compactFeed = buildCompactFeed(feed);
+await writeFile("feed/compact.json", `${JSON.stringify(compactFeed, null, 2)}\n`, "utf8");
+let delta = buildFeedDelta(previousFeed ?? feed, feed);
+if (previousFeed && feedCursor(previousFeed) === feedCursor(feed)) {
+    try {
+        const existingDelta = JSON.parse(await readFile("feed/delta.json", "utf8"));
+        if (existingDelta.to === feedCursor(feed))
+            delta = existingDelta;
+    }
+    catch {
+        // First incremental compilation: publish an empty self-verifying delta.
+    }
+}
+await writeFile("feed/delta.json", `${JSON.stringify(delta, null, 2)}\n`, "utf8");
 const digest = createHash("sha256").update(feedContent).digest("hex");
 await writeFile("feed/feed.json.sha256", `${digest}  feed.json\n`, "utf8");
 const osvDir = "feed/osv";
@@ -43,6 +59,8 @@ for (const advisory of feed.advisories) {
 }
 await writeFile(`${osvDir}/index.json`, `${JSON.stringify({ schema_version: "1", advisories: osvIndex }, null, 2)}\n`, "utf8");
 const checksumFiles = [
+    "compact.json",
+    "delta.json",
     "feed.json",
     "index.json",
     ...osvIndex.map((entry) => entry.path),

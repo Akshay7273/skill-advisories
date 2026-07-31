@@ -29,6 +29,10 @@
     "./policy": {
       "types": "./dist/policy.d.ts",
       "import": "./dist/policy.js"
+    },
+    "./delta": {
+      "types": "./dist/delta.d.ts",
+      "import": "./dist/delta.js"
     }
   },
   "files": [

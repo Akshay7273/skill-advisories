@@ -1,0 +1,472 @@
+{
+  "schema_version": "1",
+  "generated": "2026-07-21T19:55:17.634Z",
+  "cursor": "40c00fecf0e124f58fb9ddb370c6d4766dba47f9fb6181c779b725a349ad5ccc",
+  "advisory_count": 13,
+  "advisories": [
+    {
+      "id": "SKA-2026-0001",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-lth9t",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-m0fsa",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-mclql",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-mkukz",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-mn5ri",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-nlt3m",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-ocn18",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-p5rmt",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-qdyme",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-se38e",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-sxdg2",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-xcgnm",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "auto-updater-xsunp",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html"
+        },
+        {
+          "type": "ARTICLE",
+          "url": "https://www.prplbx.com/blog/clawhavoc-ai-supply-chain-attack"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0002",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "better-polymarket",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarket-all-in-one",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0003",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "clawhud",
+          "publisher": "zaycv",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "clawhub1",
+          "publisher": "zaycv",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0004",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "base-agent",
+          "publisher": "Aslaep123",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "bybit-agent",
+          "publisher": "Aslaep123",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarket-trading-bot",
+          "publisher": "Aslaep123",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0005",
+      "type": "malicious",
+      "severity": "high",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "moltbookagent",
+          "publisher": "pepe276",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "publish-dist",
+          "publisher": "pepe276",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0006",
+      "type": "malicious",
+      "severity": "high",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "moltbook-lm8",
+          "publisher": "moonshine-100rze",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0007",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "tradingview-ai-indicator-assistant",
+          "versions": [
+            "*"
+          ],
+          "sha256": [
+            "b6c7e0bf573b1c7d9d3a05eb08d26579199515b847df984862805f44a7af8007"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "ai-tradingview-assistant-for-macos",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0008",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "omnicogg",
+          "versions": [
+            "*"
+          ],
+          "sha256": [
+            "b30eaed1f7478c28f4ec50d07ed5ef014ffbc4b2bc5a38d689ba9f7abb5e19c2"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        },
+        {
+          "type": "REPORT",
+          "url": "https://research.jfrog.com/post/omnicogg-malicious-skill/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0009",
+      "type": "malicious",
+      "severity": "high",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "money-radar",
+          "versions": [
+            "*"
+          ],
+          "sha256": [
+            "ebb73dbb5aac1f6fe1a88e8f26126a1e1aa34c9f3345ad4345189b40d9bf1d1d"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0010",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarketbtc",
+          "publisher": "krajekisbtc",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "polymarketbtcassistant",
+          "publisher": "krajekisbtc",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0011",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "google-k53",
+          "versions": [
+            "1.0.0"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0012",
+      "type": "malicious",
+      "severity": "critical",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "rankaj",
+          "versions": [
+            "1.0.0"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+        }
+      ]
+    },
+    {
+      "id": "SKA-2026-0013",
+      "type": "malicious",
+      "severity": "high",
+      "artifacts": [
+        {
+          "ecosystem": "clawhub",
+          "name": "santi-text-game",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "letssendit",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "pdfcheck",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "update",
+          "versions": [
+            "*"
+          ]
+        },
+        {
+          "ecosystem": "clawhub",
+          "name": "wistec-core",
+          "versions": [
+            "*"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "type": "REPORT",
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+        }
+      ]
+    }
+  ]
+}

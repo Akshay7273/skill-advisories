@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format is based on 
 - Daily machine-readable and human feed health with checksum and freshness verification
 - Tested runbooks for triage, correction, release, compromise response, and feed rollback
 - Tested OpenClaw/ClawHub and VS Code MCP integrations with a documented compatibility contract
+- Compact advisory distribution and cursor-verified incremental feed deltas
 
 ### Fixed
 - Hash scans now use the actual installed directory when package metadata declares a different name
