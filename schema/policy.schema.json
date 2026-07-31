@@ -34,6 +34,12 @@
     "warnings": {
       "enum": ["allow", "review", "block"],
       "default": "review"
+    },
+    "maxFeedAgeHours": {
+      "description": "Reject the advisory feed once it is older than this many hours.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 48
     }
   }
 }

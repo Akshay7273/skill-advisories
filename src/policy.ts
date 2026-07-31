@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises"
 import * as z from "zod/v4"
+import { DEFAULT_MAX_FEED_AGE_HOURS } from "./freshness.js"
 import type { ArtifactAssessment } from "./intelligence.js"
 import { meetsThreshold } from "./sarif.js"
 import { ECOSYSTEMS } from "./types.js"
@@ -12,6 +13,10 @@ export const AdvisoryPolicySchema = z
     deniedEcosystems: z.array(z.enum(ECOSYSTEMS)).default([]),
     requireHash: z.boolean().default(false),
     warnings: z.enum(["allow", "review", "block"]).default("review"),
+    // How old the feed may be before this repo stops trusting it. Owned by the
+    // policy rather than the caller so the rule travels with the repo instead
+    // of living in whichever CI invocation happens to run the check.
+    maxFeedAgeHours: z.number().int().positive().default(DEFAULT_MAX_FEED_AGE_HOURS),
   })
   .strict()
 
