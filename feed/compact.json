@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "generated": "2026-07-21T19:55:17.634Z",
-  "cursor": "40c00fecf0e124f58fb9ddb370c6d4766dba47f9fb6181c779b725a349ad5ccc",
+  "generated": "2026-07-31T21:10:29.393Z",
+  "cursor": "19f7bc9e0058e1977d05f0354847993a40ee2e98599154bc431a58963cf3f384",
   "advisory_count": 13,
   "advisories": [
     {
@@ -104,19 +104,29 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting"
+          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting",
+          "archive_url": "https://web.archive.org/web/20260608185343/https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting",
+          "retrieved": "2026-07-31T20:35:40Z",
+          "content_sha256": "abbede342ef13a6014afbb3b56c11d226ea9b914d9b7153ddc0ef0ff7fb72abe"
         },
         {
           "type": "REPORT",
-          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "retrieved": "2026-07-31T20:35:47Z",
+          "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
         },
         {
           "type": "REPORT",
-          "url": "https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html"
+          "url": "https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html",
+          "archive_url": "https://web.archive.org/web/20260724234449/https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html",
+          "retrieved": "2026-07-31T20:35:52Z",
+          "content_sha256": "4ae5e905c08c4176c145080d6240d02b0c88fc44dff3adc1225f59d2be0fc7e5"
         },
         {
           "type": "ARTICLE",
-          "url": "https://www.prplbx.com/blog/clawhavoc-ai-supply-chain-attack"
+          "url": "https://www.prplbx.com/blog/clawhavoc-ai-supply-chain-attack",
+          "retrieved": "2026-07-31T20:35:58Z"
         }
       ]
     },
@@ -143,11 +153,17 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting"
+          "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting",
+          "archive_url": "https://web.archive.org/web/20260608185343/https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting",
+          "retrieved": "2026-07-31T20:35:40Z",
+          "content_sha256": "abbede342ef13a6014afbb3b56c11d226ea9b914d9b7153ddc0ef0ff7fb72abe"
         },
         {
           "type": "REPORT",
-          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "retrieved": "2026-07-31T20:35:47Z",
+          "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
         }
       ]
     },
@@ -176,7 +192,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "archive_url": "https://web.archive.org/web/20260723003213/https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "retrieved": "2026-07-31T20:36:04Z",
+          "content_sha256": "163ee24b5171d23ffa97fc5bffed07139f768083180668cc65b27b341f8c5779"
         }
       ]
     },
@@ -213,11 +232,17 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "archive_url": "https://web.archive.org/web/20260723003213/https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "retrieved": "2026-07-31T20:36:04Z",
+          "content_sha256": "163ee24b5171d23ffa97fc5bffed07139f768083180668cc65b27b341f8c5779"
         },
         {
           "type": "REPORT",
-          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "retrieved": "2026-07-31T20:35:47Z",
+          "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
         }
       ]
     },
@@ -246,7 +271,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "archive_url": "https://web.archive.org/web/20260723003213/https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "retrieved": "2026-07-31T20:36:04Z",
+          "content_sha256": "163ee24b5171d23ffa97fc5bffed07139f768083180668cc65b27b341f8c5779"
         }
       ]
     },
@@ -267,7 +295,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/"
+          "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "archive_url": "https://web.archive.org/web/20260723003213/https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+          "retrieved": "2026-07-31T20:36:04Z",
+          "content_sha256": "163ee24b5171d23ffa97fc5bffed07139f768083180668cc65b27b341f8c5779"
         }
       ]
     },
@@ -297,7 +328,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "retrieved": "2026-07-31T20:36:11Z",
+          "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
         }
       ]
     },
@@ -320,11 +354,17 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "retrieved": "2026-07-31T20:36:11Z",
+          "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
         },
         {
           "type": "REPORT",
-          "url": "https://research.jfrog.com/post/omnicogg-malicious-skill/"
+          "url": "https://research.jfrog.com/post/omnicogg-malicious-skill/",
+          "archive_url": "https://web.archive.org/web/20260412095311/https://research.jfrog.com/post/omnicogg-malicious-skill/",
+          "retrieved": "2026-07-31T20:36:16Z",
+          "content_sha256": "dee40056a329d9c0287b557c4905b1154102629e5e2e7b417073387ff8c992bd"
         }
       ]
     },
@@ -347,7 +387,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "retrieved": "2026-07-31T20:36:11Z",
+          "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
         }
       ]
     },
@@ -376,7 +419,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "retrieved": "2026-07-31T20:36:11Z",
+          "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
         }
       ]
     },
@@ -396,7 +442,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "retrieved": "2026-07-31T20:35:47Z",
+          "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
         }
       ]
     },
@@ -416,7 +465,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/"
+          "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+          "retrieved": "2026-07-31T20:35:47Z",
+          "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
         }
       ]
     },
@@ -464,7 +516,10 @@
       "references": [
         {
           "type": "REPORT",
-          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/"
+          "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+          "retrieved": "2026-07-31T20:36:11Z",
+          "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
         }
       ]
     }

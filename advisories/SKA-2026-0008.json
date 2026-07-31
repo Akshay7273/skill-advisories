@@ -10,10 +10,22 @@
     { "ecosystem": "clawhub", "name": "omnicogg", "versions": ["*"], "sha256": ["b30eaed1f7478c28f4ec50d07ed5ef014ffbc4b2bc5a38d689ba9f7abb5e19c2"] }
   ],
   "references": [
-    { "type": "REPORT", "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/" },
-    { "type": "REPORT", "url": "https://research.jfrog.com/post/omnicogg-malicious-skill/" }
+    {
+      "type": "REPORT",
+      "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+      "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+      "retrieved": "2026-07-31T20:36:11Z",
+      "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://research.jfrog.com/post/omnicogg-malicious-skill/",
+      "archive_url": "https://web.archive.org/web/20260412095311/https://research.jfrog.com/post/omnicogg-malicious-skill/",
+      "retrieved": "2026-07-31T20:36:16Z",
+      "content_sha256": "dee40056a329d9c0287b557c4905b1154102629e5e2e7b417073387ff8c992bd"
+    }
   ],
   "credits": ["JFrog Security Research", "Unit42, Palo Alto Networks"],
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z"
+  "modified": "2026-07-31T21:10:00Z"
 }

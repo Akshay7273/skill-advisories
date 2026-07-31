@@ -3,7 +3,7 @@
   "summary": "Skills polymarketbtc and polymarketbtcassistant by krajekisbtc exfiltrated cryptocurrency private keys via the Telegram Bot API.",
   "details": "Unit42 documented this distinct cluster exfiltrating cryptocurrency private keys via the Telegram Bot API, a command-and-control channel independent of the shared ClawHavoc dropper infrastructure.",
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-31T21:10:00Z",
   "affected": [
     {
       "package": {
@@ -42,6 +42,14 @@
     ],
     "credits": [
       "Unit42, Palo Alto Networks"
+    ],
+    "reference_provenance": [
+      {
+        "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+        "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+        "retrieved": "2026-07-31T20:36:11Z",
+        "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
+      }
     ],
     "source": "https://github.com/Akshay7273/skill-advisories"
   }

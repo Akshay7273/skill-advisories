@@ -3,7 +3,7 @@
   "summary": "ClawHavoc campaign 'auto-updater' skills on ClawHub drop the Atomic macOS Stealer (AMOS) via password-protected archives and glot.io scripts.",
   "details": "Koi Security audited all 2,857 ClawHub skills (Feb 2026) and found 341 malicious skills, 335 from a single campaign dubbed ClawHavoc; by Feb 16 the count had grown to 824. The named auto-updater-* variants deliver a keylogging trojan identified as Atomic macOS Stealer (AMOS) using password-protected ZIP archives to evade antivirus scanning and obfuscated glot.io shell scripts that fetch payloads from attacker-controlled servers (91.92.242.30, a confirmed AMOS C2). Antiy CERT independently counted 1,184 malicious skills across 12 author accounts, attributing 677 to publisher hightower6eu. Trend Micro separately confirmed AMOS distribution through malicious OpenClaw skills across ClawHub and SkillsMP.",
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-31T21:10:00Z",
   "affected": [
     {
       "package": {
@@ -153,6 +153,30 @@
       "Koi Security",
       "Antiy CERT",
       "Trend Micro Research"
+    ],
+    "reference_provenance": [
+      {
+        "url": "https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting",
+        "archive_url": "https://web.archive.org/web/20260608185343/https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting",
+        "retrieved": "2026-07-31T20:35:40Z",
+        "content_sha256": "abbede342ef13a6014afbb3b56c11d226ea9b914d9b7153ddc0ef0ff7fb72abe"
+      },
+      {
+        "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+        "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+        "retrieved": "2026-07-31T20:35:47Z",
+        "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
+      },
+      {
+        "url": "https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html",
+        "archive_url": "https://web.archive.org/web/20260724234449/https://www.trendmicro.com/en_us/research/26/b/openclaw-skills-used-to-distribute-atomic-macos-stealer.html",
+        "retrieved": "2026-07-31T20:35:52Z",
+        "content_sha256": "4ae5e905c08c4176c145080d6240d02b0c88fc44dff3adc1225f59d2be0fc7e5"
+      },
+      {
+        "url": "https://www.prplbx.com/blog/clawhavoc-ai-supply-chain-attack",
+        "retrieved": "2026-07-31T20:35:58Z"
+      }
     ],
     "source": "https://github.com/Akshay7273/skill-advisories"
   }

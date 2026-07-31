@@ -11,9 +11,15 @@
     { "ecosystem": "clawhub", "name": "polymarketbtcassistant", "publisher": "krajekisbtc", "versions": ["*"] }
   ],
   "references": [
-    { "type": "REPORT", "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/" }
+    {
+      "type": "REPORT",
+      "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+      "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+      "retrieved": "2026-07-31T20:36:11Z",
+      "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
+    }
   ],
   "credits": ["Unit42, Palo Alto Networks"],
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z"
+  "modified": "2026-07-31T21:10:00Z"
 }
