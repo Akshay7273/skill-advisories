@@ -66,11 +66,11 @@ download channel, and security tools can ingest an OSV-compatible export.
 
 Put safety checks directly in the workflows where agents acquire capabilities.
 
-- [ ] Read-only MCP server for advisory search and artifact verification
-- [ ] Claude Code hook example for pre-install skill checks
-- [ ] Declarative policy file for severity, ecosystem, and offline requirements
+- [x] Read-only MCP server for advisory search and artifact verification
+- [x] Claude Code hook example for pre-install package checks
+- [x] Declarative policy file for severity, ecosystem, hash, and warning requirements
 - [ ] Lockfile format for approved artifact identities and hashes
-- [ ] Reusable API package with no CLI side effects
+- [x] Reusable API package with no CLI side effects
 - [ ] Reference integrations for at least three agent ecosystems
 
 **Exit criteria:** an agent can check an artifact before installation, explain a

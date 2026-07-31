@@ -66,6 +66,21 @@ Exit codes: `0` no advisories matched · `1` matches found (CI-friendly) · `2` 
 
 Automation consumers can rely on the [versioned JSON result contract](docs/result-schema.md).
 
+## MCP and Claude Code
+
+Run the read-only MCP server so agents can check an artifact before installing
+it:
+
+```bash
+claude mcp add --transport stdio --scope user skill-advisories -- \
+  npx -y -p @akshay7273/skill-advisories skill-advisories-mcp
+```
+
+The server provides `check_artifact`, `get_advisory`, and
+`search_advisories`. A repository can add `--policy examples/policy.json` to
+enforce severity thresholds, denied ecosystems, immutable hashes, and warning
+handling. See the [MCP, policy, and Claude Code integration guide](docs/mcp.md).
+
 ## GitHub Action
 
 Fail your CI when a skill you ship or install matches a published advisory:

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "skill-advisories": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "-p",
+        "@akshay7273/skill-advisories",
+        "skill-advisories-mcp",
+        "--policy",
+        "examples/policy.json"
+      ]
+    }
+  }
+}
