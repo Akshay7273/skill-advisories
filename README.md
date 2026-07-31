@@ -60,9 +60,18 @@ npx @akshay7273/skill-advisories scan --offline
 npx @akshay7273/skill-advisories scan ./skills --fail-on high
 ```
 
-Options: `--format <human|json|sarif>` (output format), `--json` (alias for `--format json`), `--fail-on <severity>` (threshold), `--ecosystem <id>` (restrict name checks), `--version <value>` (installed version), `--sha256` (hash lookup), `--strict` (fail on typosquats), `--offline` (use cache), `--refresh` (force download), `--feed <url-or-path>` (alternate feed source).
+Common options: `--format <human|json|sarif>`, `--fail-on <severity>`,
+`--ecosystem <id>`, `--version <value>`, `--sha256`, `--strict`,
+`--offline`, `--refresh`, and `--feed <url-or-path>`.
 
-Exit codes: `0` no advisories matched · `1` matches found (CI-friendly) · `2` usage or feed error.
+Filesystem scans also support bounded execution with `--concurrency`,
+`--hash-concurrency`, `--max-file-bytes`, `--max-files`,
+`--max-total-bytes`, and repeatable `--exclude-dir` options. An incomplete scan
+fails closed with exit code 2; `--allow-incomplete` explicitly permits a partial
+result. See the [JSON result contract](docs/result-schema.md) for scan telemetry.
+
+Exit codes: `0` no advisories matched · `1` findings met policy · `2` usage,
+feed, or incomplete-scan error.
 
 Automation consumers can rely on the [versioned JSON result contract](docs/result-schema.md).
 

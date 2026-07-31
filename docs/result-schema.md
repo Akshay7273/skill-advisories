@@ -24,7 +24,19 @@ forward compatibility.
       "matchedBy": "name"
     }
   ],
-  "warnings": []
+  "warnings": [],
+  "scan": {
+    "discoveredFiles": 2,
+    "hashedFiles": 1,
+    "hashedBytes": 128,
+    "skippedLargeFiles": 0,
+    "skippedBudgetFiles": 1,
+    "skippedSymlinks": 0,
+    "skippedExcludedDirectories": 0,
+    "unreadableEntries": 0,
+    "budgetExhausted": true,
+    "artifactsWithExhaustedBudgets": 1
+  }
 }
 ```
 
@@ -32,12 +44,18 @@ forward compatibility.
 and `sha256` are present for file-hash findings. Warnings describe proximity to
 known-bad names and are not matches unless policy enables strict mode.
 
+`scan` is present only for filesystem scans. It reports exactly what was hashed
+or skipped. Oversized, over-budget, or unreadable files make the scan incomplete
+and produce exit code `2` by default, even when no advisory matches. Callers may
+use `--allow-incomplete` only when partial coverage is an explicit policy choice.
+
 ## Exit codes
 
 - `0`: no finding met the configured failure threshold.
 - `1`: at least one finding met the threshold, or a typosquat warning was found
   with `--strict`.
-- `2`: invalid arguments, an unreadable feed, or another operational error.
+- `2`: invalid arguments, an unreadable feed, an incomplete filesystem scan,
+  or another operational error.
 
 JSON is written to stdout. Diagnostics, cache warnings, and human-readable
 errors are written to stderr.

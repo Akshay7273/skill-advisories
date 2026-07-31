@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Added
+- Streaming SHA-256 hashing with bounded file concurrency and memory usage
+- Configurable scan concurrency, file-count, file-size, byte, and directory-exclusion limits
+- Structured scan telemetry for hashed, skipped, excluded, and unreadable files
+- Fail-closed incomplete scans with an explicit `--allow-incomplete` override
+
+### Fixed
+- Hash scans now use the actual installed directory when package metadata declares a different name
+
 ## [0.5.1] - 2026-07-31
 
 ### Fixed

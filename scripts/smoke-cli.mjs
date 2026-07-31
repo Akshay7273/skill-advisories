@@ -69,11 +69,23 @@ try {
     "1",
     "--json",
   ])
-  assert.equal(bounded.status, 0, bounded.stderr)
+  assert.equal(bounded.status, 2, bounded.stderr)
   const boundedResult = JSON.parse(bounded.stdout)
   assert.equal(boundedResult.scan.hashedFiles, 1)
   assert.equal(boundedResult.scan.skippedBudgetFiles, 1)
   assert.equal(boundedResult.scan.budgetExhausted, true)
+
+  const allowed = run([
+    "scan",
+    scanRoot,
+    "--feed",
+    "feed/feed.json",
+    "--max-files",
+    "1",
+    "--allow-incomplete",
+    "--json",
+  ])
+  assert.equal(allowed.status, 0, allowed.stderr)
 } finally {
   rmSync(scanRoot, { recursive: true, force: true })
 }

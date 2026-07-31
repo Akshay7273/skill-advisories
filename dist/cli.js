@@ -31,6 +31,7 @@ Options:
   --max-files <n> Hash at most this many files per artifact (default: 10000)
   --max-total-bytes <n> Hash at most this many bytes per artifact (default: 268435456)
   --exclude-dir <name> Skip an exact directory basename; may be repeated
+  --allow-incomplete Continue when files exceed budgets or cannot be read
   --help, -h       Show this help
   --version, -v    Show version
 
@@ -56,6 +57,7 @@ function parseArgs(argv) {
     let maxFiles;
     let maxTotalBytes;
     const excludeDirectories = [];
+    let allowIncomplete = false;
     const VALID_FORMATS = ["human", "json", "sarif"];
     const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
     let i = 0;
@@ -146,6 +148,9 @@ function parseArgs(argv) {
             }
             excludeDirectories.push(value);
         }
+        else if (arg === "--allow-incomplete") {
+            allowIncomplete = true;
+        }
         else if (arg === "--help" || arg === "-h") {
             console.log(HELP);
             process.exit(0);
@@ -183,6 +188,7 @@ function parseArgs(argv) {
         maxFiles,
         maxTotalBytes,
         excludeDirectories,
+        allowIncomplete,
     };
 }
 async function loadFeedOrFail(source, options) {
@@ -193,7 +199,7 @@ async function loadFeedOrFail(source, options) {
         fail(err instanceof Error ? err.message : String(err));
     }
 }
-function report(checked, matches, warnings, format, strict, failOn, scanStats) {
+function report(checked, matches, warnings, format, strict, failOn, scanStats, allowIncomplete = false) {
     if (format === "sarif") {
         const findings = matches.map((m) => ({
             advisoryId: m.advisory.id,
@@ -238,8 +244,11 @@ function report(checked, matches, warnings, format, strict, failOn, scanStats) {
         }, null, 2));
     }
     else {
-        if (scanStats && (scanStats.budgetExhausted || scanStats.unreadableEntries > 0)) {
-            console.error(pc.yellow(`\u26a0 scan incomplete: ${scanStats.skippedBudgetFiles} file(s) exceeded budgets; ${scanStats.unreadableEntries} entry/entries were unreadable`));
+        if (scanStats &&
+            (scanStats.skippedLargeFiles > 0 ||
+                scanStats.budgetExhausted ||
+                scanStats.unreadableEntries > 0)) {
+            console.error(pc.yellow(`\u26a0 scan incomplete: ${scanStats.skippedLargeFiles} oversized, ${scanStats.skippedBudgetFiles} over budget, ${scanStats.unreadableEntries} unreadable`));
         }
         for (const w of warnings) {
             console.error(pc.yellow(`\u26a0 possible typosquat: "${w.name}" is ${w.distance} edit(s) away from known-bad "${w.similarTo}"`));
@@ -269,7 +278,15 @@ function report(checked, matches, warnings, format, strict, failOn, scanStats) {
         triggerFailure = matches.length > 0;
     }
     const hasWarnings = warnings.length > 0;
-    process.exitCode = triggerFailure || (strict && hasWarnings) ? 1 : 0;
+    const scanIncomplete = scanStats !== undefined &&
+        (scanStats.skippedLargeFiles > 0 ||
+            scanStats.skippedBudgetFiles > 0 ||
+            scanStats.unreadableEntries > 0);
+    process.exitCode = scanIncomplete && !allowIncomplete
+        ? 2
+        : triggerFailure || (strict && hasWarnings)
+            ? 1
+            : 0;
 }
 const args = parseArgs(process.argv.slice(2));
 if (!args.command) {
@@ -283,7 +300,8 @@ if (args.command === "check") {
         args.maxFileBytes !== undefined ||
         args.maxFiles !== undefined ||
         args.maxTotalBytes !== undefined ||
-        args.excludeDirectories.length > 0) {
+        args.excludeDirectories.length > 0 ||
+        args.allowIncomplete) {
         fail("scan resource options are only supported by the scan command");
     }
     if (args.positionals.length === 0)
@@ -376,7 +394,7 @@ else if (args.command === "scan") {
             console.log(pc.yellow("no skill directories found"));
         }
     }
-    report(result.scannedCount, result.matches, result.warnings, args.format, args.strict, args.failOn, result.stats);
+    report(result.scannedCount, result.matches, result.warnings, args.format, args.strict, args.failOn, result.stats, args.allowIncomplete);
 }
 else {
     fail(`unknown command "${args.command}"`);
