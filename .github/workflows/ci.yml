@@ -34,6 +34,7 @@ jobs:
       - run: npm run smoke
       - run: npm run health:check
       - run: npm run ops:check
+      - run: npm run integrations:check
       - name: Feed is in sync with advisories
         run: |
           npm run compile
