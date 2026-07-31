@@ -38,11 +38,11 @@ to new ecosystem threats.
 Reduce false positives and false negatives as the database grows.
 
 - [x] Ecosystem-aware lookup (`--ecosystem`) and indexed matching
-- [ ] Version-aware advisories and affected-version evaluation
-- [ ] Detect installed skill metadata instead of relying only on directory names
+- [x] Version-aware advisories and affected-version evaluation
+- [x] Detect installed skill metadata instead of relying only on directory names
 - [ ] Configurable scan exclusions and bounded hashing concurrency
-- [ ] Stable machine-readable result schema with documented exit semantics
-- [ ] A regression corpus for name, hash, version, and typosquat detection
+- [x] Stable machine-readable result schema with documented exit semantics
+- [x] A regression corpus for name, hash, version, and typosquat detection
 
 **Exit criteria:** every match identifies its ecosystem, evidence, and matching
 method; version-scoped advisories do not flag known-unaffected releases; the

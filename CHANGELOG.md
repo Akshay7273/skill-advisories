@@ -4,9 +4,14 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-31
+
 ### Added
 - Ecosystem-aware name checks through the CLI and GitHub Action
+- Exact affected-version checks through `--version`
+- Installed name and version discovery from `SKILL.md` and `package.json`
 - Reusable artifact indexes for exact-name matching
+- Versioned JSON result contract and end-to-end CLI smoke tests
 - Cross-platform CI coverage for Linux, Windows, and macOS
 
 ### Changed

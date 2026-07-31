@@ -60,6 +60,8 @@ Options: `--format <human|json|sarif>` (output format), `--json` (alias for `--f
 
 Exit codes: `0` no advisories matched · `1` matches found (CI-friendly) · `2` usage or feed error.
 
+Automation consumers can rely on the [versioned JSON result contract](docs/result-schema.md).
+
 ## GitHub Action
 
 Fail your CI when a skill you ship or install matches a published advisory:
