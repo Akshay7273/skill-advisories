@@ -8,9 +8,29 @@
     "node": ">=20"
   },
   "bin": {
-    "skill-advisories": "dist/cli.js"
+    "skill-advisories": "dist/cli.js",
+    "skill-advisories-mcp": "dist/mcp-cli.js"
   },
   "main": "dist/lookup.js",
+  "types": "dist/lookup.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lookup.d.ts",
+      "import": "./dist/lookup.js"
+    },
+    "./intelligence": {
+      "types": "./dist/intelligence.d.ts",
+      "import": "./dist/intelligence.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp.d.ts",
+      "import": "./dist/mcp.js"
+    },
+    "./policy": {
+      "types": "./dist/policy.d.ts",
+      "import": "./dist/policy.js"
+    }
+  },
   "files": [
     "dist",
     "schema",
@@ -39,11 +59,14 @@
     "threat-intelligence"
   ],
   "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
     "@types/node": "^22.10.0",
     "esbuild": "^0.28.1",
     "tsx": "^4.19.0",
