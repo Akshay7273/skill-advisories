@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.6.0-rc.1] - 2026-07-31
+
 ### Added
 - Streaming SHA-256 hashing with bounded file concurrency and memory usage
 - Configurable scan concurrency, file-count, file-size, byte, and directory-exclusion limits
