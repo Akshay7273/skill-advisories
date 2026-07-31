@@ -34,6 +34,9 @@ npx @akshay7273/skill-advisories check omnicogg my-other-skill
 # Avoid cross-ecosystem name collisions
 npx @akshay7273/skill-advisories check --ecosystem mcp-server my-server
 
+# Evaluate a specific installed version when an advisory lists affected versions
+npx @akshay7273/skill-advisories check --ecosystem npm --version 1.2.3 my-package
+
 # Check file hashes directly (catches renamed malware)
 npx @akshay7273/skill-advisories check --sha256 <64-hex-digest>
 
@@ -53,7 +56,7 @@ npx @akshay7273/skill-advisories scan --offline
 npx @akshay7273/skill-advisories scan ./skills --fail-on high
 ```
 
-Options: `--format <human|json|sarif>` (output format), `--json` (alias for `--format json`), `--fail-on <severity>` (threshold), `--ecosystem <id>` (restrict name checks), `--sha256` (hash lookup), `--strict` (fail on typosquats), `--offline` (use cache), `--refresh` (force download), `--feed <url-or-path>` (alternate feed source).
+Options: `--format <human|json|sarif>` (output format), `--json` (alias for `--format json`), `--fail-on <severity>` (threshold), `--ecosystem <id>` (restrict name checks), `--version <value>` (installed version), `--sha256` (hash lookup), `--strict` (fail on typosquats), `--offline` (use cache), `--refresh` (force download), `--feed <url-or-path>` (alternate feed source).
 
 Exit codes: `0` no advisories matched · `1` matches found (CI-friendly) · `2` usage or feed error.
 
@@ -89,7 +92,7 @@ Upload SARIF results to GitHub Code Scanning:
     sarif_file: skill-advisories.sarif
 ```
 
-Inputs: `names` (space-separated skill names), `scan-dir` (directory to scan), `ecosystem` (restrict name checks), `feed` (alternate feed URL or path), `format` (output format), `sarif-file` (SARIF output path), `fail-on` (minimum severity threshold).
+Inputs: `names` (space-separated skill names), `scan-dir` (directory to scan), `ecosystem` (restrict name checks), `version` (installed version for name checks), `feed` (alternate feed URL or path), `format` (output format), `sarif-file` (SARIF output path), `fail-on` (minimum severity threshold).
 
 ## Data integrity
 

@@ -13,6 +13,7 @@ export type Match = {
   advisory: Advisory
   artifactNames: string[]
   artifactEcosystems: Ecosystem[]
+  version?: string
 }
 
 type ArtifactIndexEntry = { advisory: Advisory; artifact: Artifact }
@@ -24,7 +25,19 @@ export type ArtifactIndex = {
 
 export type MatchNamesOptions = {
   ecosystem?: Ecosystem
+  version?: string
   index?: ArtifactIndex
+}
+
+function normalizeVersion(version: string): string {
+  return version.trim().replace(/^v(?=\d)/i, "")
+}
+
+function artifactAffectsVersion(artifact: Artifact, version?: string): boolean {
+  if (!version || !artifact.versions || artifact.versions.length === 0) return true
+  if (artifact.versions.includes("*")) return true
+  const wanted = normalizeVersion(version)
+  return artifact.versions.some((candidate) => normalizeVersion(candidate) === wanted)
 }
 
 export type LoadFeedOptions = {
@@ -158,6 +171,7 @@ export function matchNames(
     >()
 
     for (const { advisory, artifact } of entries) {
+      if (!artifactAffectsVersion(artifact, options.version)) continue
       const group = grouped.get(advisory.id) ?? {
         advisory,
         names: new Set<string>(),
@@ -174,6 +188,7 @@ export function matchNames(
         advisory: group.advisory,
         artifactNames: [...group.names],
         artifactEcosystems: [...group.ecosystems],
+        version: options.version,
       })
     }
   }

@@ -3,6 +3,17 @@ import { readFile } from "node:fs/promises";
 import pc from "picocolors";
 import { isFresh, readCache, writeCache } from "./cache.js";
 export const DEFAULT_FEED_URL = "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json";
+function normalizeVersion(version) {
+    return version.trim().replace(/^v(?=\d)/i, "");
+}
+function artifactAffectsVersion(artifact, version) {
+    if (!version || !artifact.versions || artifact.versions.length === 0)
+        return true;
+    if (artifact.versions.includes("*"))
+        return true;
+    const wanted = normalizeVersion(version);
+    return artifact.versions.some((candidate) => normalizeVersion(candidate) === wanted);
+}
 /** Load the advisory feed from a URL (http/https) or a local file path. */
 export async function loadFeed(source = DEFAULT_FEED_URL, options = {}) {
     if (!source.startsWith("http://") && !source.startsWith("https://")) {
@@ -97,6 +108,8 @@ export function matchNames(feed, names, options = {}) {
             : index.byName.get(q) ?? [];
         const grouped = new Map();
         for (const { advisory, artifact } of entries) {
+            if (!artifactAffectsVersion(artifact, options.version))
+                continue;
             const group = grouped.get(advisory.id) ?? {
                 advisory,
                 names: new Set(),
@@ -112,6 +125,7 @@ export function matchNames(feed, names, options = {}) {
                 advisory: group.advisory,
                 artifactNames: [...group.names],
                 artifactEcosystems: [...group.ecosystems],
+                version: options.version,
             });
         }
     }

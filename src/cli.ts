@@ -26,6 +26,7 @@ Options:
   --fail-on <sev>  Minimum severity to trigger exit code 1: low, medium, high, critical
   --feed <source>  Feed URL or local file path (default: official feed)
   --ecosystem <id> Restrict name checks to one artifact ecosystem
+  --version <value> Restrict name checks to an installed artifact version
   --sha256         Treat positional arguments as SHA-256 hashes
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
   --offline        Use cached feed only; fail if cache is missing
@@ -50,6 +51,7 @@ type ParsedArgs = {
   offline: boolean
   refresh: boolean
   ecosystem?: Ecosystem
+  version?: string
   failOn?: string
 }
 
@@ -62,6 +64,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let offline = false
   let refresh = false
   let ecosystem: Ecosystem | undefined = undefined
+  let version: string | undefined = undefined
   let failOn: string | undefined = undefined
 
   const VALID_FORMATS = ["human", "json", "sarif"]
@@ -97,6 +100,11 @@ function parseArgs(argv: string[]): ParsedArgs {
         fail(`invalid ecosystem "${value ?? ""}", expected one of: ${ECOSYSTEMS.join(", ")}`)
       }
       ecosystem = value as Ecosystem
+    } else if (arg === "--version") {
+      i++
+      const value = argv[i]
+      if (!value || value.trim() === "") fail("--version requires a value")
+      version = value.trim()
     } else if (arg === "--sha256") {
       sha256 = true
     } else if (arg === "--strict") {
@@ -133,6 +141,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     offline,
     refresh,
     ecosystem,
+    version,
     failOn,
   }
 }
@@ -170,6 +179,7 @@ function report(
     console.log(
       JSON.stringify(
         {
+          schemaVersion: "1",
           checked,
           matchCount: matches.length,
           matches: matches.map((m) => {
@@ -179,6 +189,7 @@ function report(
               type: m.advisory.type,
               severity: m.advisory.severity,
               ecosystems: m.artifactEcosystems,
+              ...(m.version ? { version: m.version } : {}),
               summary: m.advisory.summary,
               references: m.advisory.references.map((r) => r.url),
             }
@@ -215,13 +226,13 @@ function report(
         ),
       )
       for (const m of matches) {
-        const ecosystemDetail = ` [${m.artifactEcosystems.join(", ")}]`
+        const identityDetail = `${m.version ? `@${m.version}` : ""} [${m.artifactEcosystems.join(", ")}]`
         const matchedDetail =
           m.matchedBy === "sha256"
             ? ` (file hash ${m.file ? `${m.file}: ` : ""}${m.sha256})`
             : ""
         console.log(
-          `  ${pc.bold(m.query)}${ecosystemDetail} \u2192 ${m.advisory.id} [${m.advisory.severity}] ${m.advisory.summary}${matchedDetail}`,
+          `  ${pc.bold(m.query)}${identityDetail} \u2192 ${m.advisory.id} [${m.advisory.severity}] ${m.advisory.summary}${matchedDetail}`,
         )
         for (const ref of m.advisory.references) {
           console.log(`      ${ref.url}`)
@@ -256,6 +267,7 @@ if (args.command === "check") {
 
   if (args.sha256) {
     if (args.ecosystem) fail("--ecosystem cannot be combined with --sha256")
+    if (args.version) fail("--version cannot be combined with --sha256")
     for (const h of args.positionals) {
       if (!/^[0-9a-fA-F]{64}$/.test(h)) {
         fail(`invalid SHA-256 hash "${h}"`)
@@ -283,12 +295,16 @@ if (args.command === "check") {
     }
     report(args.positionals.length, matches, [], args.format, args.strict, args.failOn)
   } else {
-    const nameHits = matchNames(feed, args.positionals, { ecosystem: args.ecosystem })
+    const nameHits = matchNames(feed, args.positionals, {
+      ecosystem: args.ecosystem,
+      version: args.version,
+    })
     const matches: ScanMatch[] = nameHits.map((nh) => ({
       query: nh.query,
       advisory: nh.advisory,
       artifactNames: nh.artifactNames,
       artifactEcosystems: nh.artifactEcosystems,
+      version: nh.version,
       matchedBy: "name",
     }))
 
@@ -312,10 +328,10 @@ if (args.command === "check") {
     report(args.positionals.length, matches, warnings, args.format, args.strict, args.failOn)
   }
 } else if (args.command === "scan") {
-  if (args.ecosystem) fail("--ecosystem is only supported by the check command")
+  if (args.version) fail("--version is only supported by the check command")
   const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs()
   const feed = await loadFeedOrFail(args.feed, feedOptions)
-  const result = await scanSkills(dirs, feed)
+  const result = await scanSkills(dirs, feed, { ecosystem: args.ecosystem })
 
   if (args.format === "human") {
     for (const d of result.installed) {

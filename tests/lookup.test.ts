@@ -37,4 +37,17 @@ describe("advisory lookup", () => {
     const matches = matchNames(feed, ["OMNICOGG"], { index })
     expect(matches[0].artifactEcosystems).toContain("clawhub")
   })
+
+  it("matches only explicitly affected versions", async () => {
+    const loaded = await loadAdvisories("advisories")
+    const { feed } = buildFeed(loaded.map((l) => l.advisory))
+    expect(matchNames(feed, ["rankaj"], { version: "v1.0.0" })).toHaveLength(1)
+    expect(matchNames(feed, ["rankaj"], { version: "2.0.0" })).toHaveLength(0)
+  })
+
+  it("treats the wildcard version as all versions", async () => {
+    const loaded = await loadAdvisories("advisories")
+    const { feed } = buildFeed(loaded.map((l) => l.advisory))
+    expect(matchNames(feed, ["omnicogg"], { version: "99.0.0" })).toHaveLength(1)
+  })
 })

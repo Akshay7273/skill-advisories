@@ -3,6 +3,8 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import type { Feed } from "./compile.js"
 import { hashSkillDir } from "./hash.js"
+import { detectSkillMetadata, inferEcosystemFromDirectory } from "./metadata.js"
+import type { InstalledSkill } from "./metadata.js"
 import type { Advisory, Ecosystem } from "./types.js"
 import { buildArtifactIndex, collectKnownNames, matchHashes, matchNames } from "./lookup.js"
 import { findNearMatches } from "./typosquat.js"
@@ -25,16 +27,23 @@ export function defaultSkillDirs(): string[] {
  */
 export async function listInstalledSkills(
   dirs: string[],
-): Promise<Array<{ dir: string; names: string[] }>> {
-  const found: Array<{ dir: string; names: string[] }> = []
+  ecosystem?: Ecosystem,
+): Promise<Array<{ dir: string; names: string[]; skills: InstalledSkill[] }>> {
+  const found: Array<{ dir: string; names: string[]; skills: InstalledSkill[] }> = []
   for (const dir of dirs) {
     try {
       const entries = await readdir(dir, { withFileTypes: true })
-      const names = entries
+      const folders = entries
         .filter((e) => e.isDirectory())
         .map((e) => e.name)
         .sort()
-      found.push({ dir, names })
+      const inferredEcosystem = ecosystem ?? inferEcosystemFromDirectory(dir)
+      const skills = await Promise.all(
+        folders.map((name) =>
+          detectSkillMetadata(join(dir, name), name, inferredEcosystem),
+        ),
+      )
+      found.push({ dir, names: skills.map((skill) => skill.name), skills })
     } catch {
       // directory doesn't exist or is unreadable; skip
     }
@@ -47,6 +56,7 @@ export type ScanMatch = {
   advisory: Advisory
   artifactNames: string[]
   artifactEcosystems: Ecosystem[]
+  version?: string
   matchedBy: "name" | "sha256"
   file?: string
   sha256?: string
@@ -59,14 +69,20 @@ export type ScanWarning = {
 }
 
 export type ScanResult = {
-  installed: Array<{ dir: string; names: string[] }>
+  installed: Array<{ dir: string; names: string[]; skills: InstalledSkill[] }>
   scannedCount: number
   matches: ScanMatch[]
   warnings: ScanWarning[]
 }
 
-export async function scanSkills(dirs: string[], feed: Feed): Promise<ScanResult> {
-  const installed = await listInstalledSkills(dirs)
+export type ScanOptions = { ecosystem?: Ecosystem }
+
+export async function scanSkills(
+  dirs: string[],
+  feed: Feed,
+  options: ScanOptions = {},
+): Promise<ScanResult> {
+  const installed = await listInstalledSkills(dirs, options.ecosystem)
   const knownNames = collectKnownNames(feed)
   const artifactIndex = buildArtifactIndex(feed)
   const matches: ScanMatch[] = []
@@ -79,14 +95,19 @@ export async function scanSkills(dirs: string[], feed: Feed): Promise<ScanResult
   let scannedCount = 0
 
   for (const group of installed) {
-    for (const name of group.names) {
+    for (const skill of group.skills) {
+      const { name, version, ecosystem } = skill
       scannedCount++
       const skillPath = join(group.dir, name)
       let matchedInSkill = false
       const matchedAdvisoryIds = new Set<string>()
 
       // 1. Name match
-      const nameHits = matchNames(feed, [name], { index: artifactIndex })
+      const nameHits = matchNames(feed, [name], {
+        index: artifactIndex,
+        ecosystem,
+        version,
+      })
       for (const nh of nameHits) {
         matchedInSkill = true
         matchedAdvisoryIds.add(nh.advisory.id)
@@ -95,6 +116,7 @@ export async function scanSkills(dirs: string[], feed: Feed): Promise<ScanResult
           advisory: nh.advisory,
           artifactNames: nh.artifactNames,
           artifactEcosystems: nh.artifactEcosystems,
+          version,
           matchedBy: "name",
         })
       }
@@ -119,6 +141,7 @@ export async function scanSkills(dirs: string[], feed: Feed): Promise<ScanResult
                 advisory: adv,
                 artifactNames: adv.artifacts.map((a) => a.name),
                 artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
+                version,
                 matchedBy: "sha256",
                 file: matchingFile?.file,
                 sha256: hh.sha256,

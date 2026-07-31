@@ -150,6 +150,15 @@ function isFresh(entry, ttlMs = DEFAULT_TTL_MS) {
 
 // src/lookup.ts
 var DEFAULT_FEED_URL = "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json";
+function normalizeVersion(version) {
+  return version.trim().replace(/^v(?=\d)/i, "");
+}
+function artifactAffectsVersion(artifact, version) {
+  if (!version || !artifact.versions || artifact.versions.length === 0) return true;
+  if (artifact.versions.includes("*")) return true;
+  const wanted = normalizeVersion(version);
+  return artifact.versions.some((candidate) => normalizeVersion(candidate) === wanted);
+}
 async function loadFeed(source = DEFAULT_FEED_URL, options = {}) {
   if (!source.startsWith("http://") && !source.startsWith("https://")) {
     return JSON.parse(await readFile(source, "utf8"));
@@ -241,6 +250,7 @@ function matchNames(feed, names, options = {}) {
     const entries = options.ecosystem ? index.byEcosystemAndName.get(`${options.ecosystem}:${q}`) ?? [] : index.byName.get(q) ?? [];
     const grouped = /* @__PURE__ */ new Map();
     for (const { advisory, artifact } of entries) {
+      if (!artifactAffectsVersion(artifact, options.version)) continue;
       const group = grouped.get(advisory.id) ?? {
         advisory,
         names: /* @__PURE__ */ new Set(),
@@ -255,7 +265,8 @@ function matchNames(feed, names, options = {}) {
         query,
         advisory: group.advisory,
         artifactNames: [...group.names],
-        artifactEcosystems: [...group.ecosystems]
+        artifactEcosystems: [...group.ecosystems],
+        version: options.version
       });
     }
   }
@@ -349,6 +360,63 @@ async function hashSkillDir(dir) {
   return out;
 }
 
+// src/metadata.ts
+import { readFile as readFile2 } from "node:fs/promises";
+import path3 from "node:path";
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : void 0;
+}
+async function readPackageMetadata(skillPath) {
+  try {
+    const parsed = JSON.parse(await readFile2(path3.join(skillPath, "package.json"), "utf8"));
+    return {
+      name: nonEmptyString(parsed.name),
+      version: nonEmptyString(parsed.version)
+    };
+  } catch {
+    return {};
+  }
+}
+async function readSkillFrontmatter(skillPath) {
+  try {
+    const contents = await readFile2(path3.join(skillPath, "SKILL.md"), "utf8");
+    const frontmatter = contents.match(/^---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
+    if (!frontmatter) return {};
+    const fields = {};
+    for (const line of frontmatter.split(/\r?\n/)) {
+      const match = line.match(/^([A-Za-z][\w-]*):\s*(.*?)\s*$/);
+      if (!match) continue;
+      fields[match[1].toLowerCase()] = match[2].replace(/^(["'])(.*)\1$/, "$2");
+    }
+    return {
+      name: nonEmptyString(fields.name),
+      version: nonEmptyString(fields.version)
+    };
+  } catch {
+    return {};
+  }
+}
+function inferEcosystemFromDirectory(dir) {
+  const normalized = dir.replaceAll("\\", "/").toLowerCase().replace(/\/$/, "");
+  if (normalized.endsWith("/.claude/skills")) return "claude-skill";
+  if (normalized.endsWith("/.openclaw/skills") || normalized.endsWith("/.clawdbot/skills") || normalized.endsWith("/.moltbot/skills")) {
+    return "clawhub";
+  }
+  return void 0;
+}
+async function detectSkillMetadata(skillPath, fallbackName, ecosystem) {
+  const [skill, pkg] = await Promise.all([
+    readSkillFrontmatter(skillPath),
+    readPackageMetadata(skillPath)
+  ]);
+  return {
+    path: skillPath,
+    name: skill.name ?? pkg.name ?? fallbackName,
+    version: skill.version ?? pkg.version,
+    ecosystem
+  };
+}
+
 // src/typosquat.ts
 function levenshtein(a, b, max) {
   if (a === b) return 0;
@@ -404,20 +472,26 @@ var KNOWN_SKILL_DIRS = [
 function defaultSkillDirs() {
   return KNOWN_SKILL_DIRS.map((d) => join(homedir(), d));
 }
-async function listInstalledSkills(dirs) {
+async function listInstalledSkills(dirs, ecosystem) {
   const found = [];
   for (const dir of dirs) {
     try {
       const entries = await readdir(dir, { withFileTypes: true });
-      const names = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
-      found.push({ dir, names });
+      const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
+      const inferredEcosystem = ecosystem ?? inferEcosystemFromDirectory(dir);
+      const skills = await Promise.all(
+        folders.map(
+          (name) => detectSkillMetadata(join(dir, name), name, inferredEcosystem)
+        )
+      );
+      found.push({ dir, names: skills.map((skill) => skill.name), skills });
     } catch {
     }
   }
   return found;
 }
-async function scanSkills(dirs, feed) {
-  const installed = await listInstalledSkills(dirs);
+async function scanSkills(dirs, feed, options = {}) {
+  const installed = await listInstalledSkills(dirs, options.ecosystem);
   const knownNames = collectKnownNames(feed);
   const artifactIndex = buildArtifactIndex(feed);
   const matches = [];
@@ -428,12 +502,17 @@ async function scanSkills(dirs, feed) {
   }
   let scannedCount = 0;
   for (const group of installed) {
-    for (const name of group.names) {
+    for (const skill of group.skills) {
+      const { name, version, ecosystem } = skill;
       scannedCount++;
       const skillPath = join(group.dir, name);
       let matchedInSkill = false;
       const matchedAdvisoryIds = /* @__PURE__ */ new Set();
-      const nameHits = matchNames(feed, [name], { index: artifactIndex });
+      const nameHits = matchNames(feed, [name], {
+        index: artifactIndex,
+        ecosystem,
+        version
+      });
       for (const nh of nameHits) {
         matchedInSkill = true;
         matchedAdvisoryIds.add(nh.advisory.id);
@@ -442,6 +521,7 @@ async function scanSkills(dirs, feed) {
           advisory: nh.advisory,
           artifactNames: nh.artifactNames,
           artifactEcosystems: nh.artifactEcosystems,
+          version,
           matchedBy: "name"
         });
       }
@@ -463,6 +543,7 @@ async function scanSkills(dirs, feed) {
                 advisory: adv,
                 artifactNames: adv.artifacts.map((a) => a.name),
                 artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
+                version,
                 matchedBy: "sha256",
                 file: matchingFile?.file,
                 sha256: hh.sha256
@@ -563,6 +644,7 @@ Options:
   --fail-on <sev>  Minimum severity to trigger exit code 1: low, medium, high, critical
   --feed <source>  Feed URL or local file path (default: official feed)
   --ecosystem <id> Restrict name checks to one artifact ecosystem
+  --version <value> Restrict name checks to an installed artifact version
   --sha256         Treat positional arguments as SHA-256 hashes
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
   --offline        Use cached feed only; fail if cache is missing
@@ -584,6 +666,7 @@ function parseArgs(argv) {
   let offline = false;
   let refresh = false;
   let ecosystem = void 0;
+  let version = void 0;
   let failOn = void 0;
   const VALID_FORMATS = ["human", "json", "sarif"];
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
@@ -617,6 +700,11 @@ function parseArgs(argv) {
         fail(`invalid ecosystem "${value ?? ""}", expected one of: ${ECOSYSTEMS.join(", ")}`);
       }
       ecosystem = value;
+    } else if (arg === "--version") {
+      i++;
+      const value = argv[i];
+      if (!value || value.trim() === "") fail("--version requires a value");
+      version = value.trim();
     } else if (arg === "--sha256") {
       sha256 = true;
     } else if (arg === "--strict") {
@@ -651,6 +739,7 @@ function parseArgs(argv) {
     offline,
     refresh,
     ecosystem,
+    version,
     failOn
   };
 }
@@ -676,6 +765,7 @@ function report(checked, matches, warnings, format, strict, failOn) {
     console.log(
       JSON.stringify(
         {
+          schemaVersion: "1",
           checked,
           matchCount: matches.length,
           matches: matches.map((m) => {
@@ -685,6 +775,7 @@ function report(checked, matches, warnings, format, strict, failOn) {
               type: m.advisory.type,
               severity: m.advisory.severity,
               ecosystems: m.artifactEcosystems,
+              ...m.version ? { version: m.version } : {},
               summary: m.advisory.summary,
               references: m.advisory.references.map((r) => r.url)
             };
@@ -720,10 +811,10 @@ function report(checked, matches, warnings, format, strict, failOn) {
         )
       );
       for (const m of matches) {
-        const ecosystemDetail = ` [${m.artifactEcosystems.join(", ")}]`;
+        const identityDetail = `${m.version ? `@${m.version}` : ""} [${m.artifactEcosystems.join(", ")}]`;
         const matchedDetail = m.matchedBy === "sha256" ? ` (file hash ${m.file ? `${m.file}: ` : ""}${m.sha256})` : "";
         console.log(
-          `  ${import_picocolors2.default.bold(m.query)}${ecosystemDetail} \u2192 ${m.advisory.id} [${m.advisory.severity}] ${m.advisory.summary}${matchedDetail}`
+          `  ${import_picocolors2.default.bold(m.query)}${identityDetail} \u2192 ${m.advisory.id} [${m.advisory.severity}] ${m.advisory.summary}${matchedDetail}`
         );
         for (const ref of m.advisory.references) {
           console.log(`      ${ref.url}`);
@@ -751,6 +842,7 @@ if (args.command === "check") {
   const feed = await loadFeedOrFail(args.feed, feedOptions);
   if (args.sha256) {
     if (args.ecosystem) fail("--ecosystem cannot be combined with --sha256");
+    if (args.version) fail("--version cannot be combined with --sha256");
     for (const h of args.positionals) {
       if (!/^[0-9a-fA-F]{64}$/.test(h)) {
         fail(`invalid SHA-256 hash "${h}"`);
@@ -777,12 +869,16 @@ if (args.command === "check") {
     }
     report(args.positionals.length, matches, [], args.format, args.strict, args.failOn);
   } else {
-    const nameHits = matchNames(feed, args.positionals, { ecosystem: args.ecosystem });
+    const nameHits = matchNames(feed, args.positionals, {
+      ecosystem: args.ecosystem,
+      version: args.version
+    });
     const matches = nameHits.map((nh) => ({
       query: nh.query,
       advisory: nh.advisory,
       artifactNames: nh.artifactNames,
       artifactEcosystems: nh.artifactEcosystems,
+      version: nh.version,
       matchedBy: "name"
     }));
     const matchedQueries = new Set(matches.map((m) => m.query.toLowerCase()));
@@ -803,10 +899,10 @@ if (args.command === "check") {
     report(args.positionals.length, matches, warnings, args.format, args.strict, args.failOn);
   }
 } else if (args.command === "scan") {
-  if (args.ecosystem) fail("--ecosystem is only supported by the check command");
+  if (args.version) fail("--version is only supported by the check command");
   const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs();
   const feed = await loadFeedOrFail(args.feed, feedOptions);
-  const result = await scanSkills(dirs, feed);
+  const result = await scanSkills(dirs, feed, { ecosystem: args.ecosystem });
   if (args.format === "human") {
     for (const d of result.installed) {
       console.log(import_picocolors2.default.dim(`scanning ${d.dir} (${d.names.length} skills)`));

@@ -16,6 +16,10 @@ inputs:
     description: "Restrict name checks to one ecosystem (for example claude-skill or mcp-server)."
     required: false
     default: ""
+  version:
+    description: "Installed artifact version to evaluate when checking names."
+    required: false
+    default: ""
   feed:
     description: "Alternate feed URL or local file path. Defaults to the official feed."
     required: false
@@ -47,6 +51,9 @@ runs:
         fi
         if [ -n "${{ inputs.ecosystem }}" ]; then
           ARGS+=(--ecosystem "${{ inputs.ecosystem }}")
+        fi
+        if [ -n "${{ inputs.version }}" ]; then
+          ARGS+=(--version "${{ inputs.version }}")
         fi
         if [ -n "${{ inputs.sarif-file }}" ]; then
           ARGS+=(--format sarif)

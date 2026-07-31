@@ -6,6 +6,7 @@ export type Match = {
     advisory: Advisory;
     artifactNames: string[];
     artifactEcosystems: Ecosystem[];
+    version?: string;
 };
 type ArtifactIndexEntry = {
     advisory: Advisory;
@@ -17,6 +18,7 @@ export type ArtifactIndex = {
 };
 export type MatchNamesOptions = {
     ecosystem?: Ecosystem;
+    version?: string;
     index?: ArtifactIndex;
 };
 export type LoadFeedOptions = {
