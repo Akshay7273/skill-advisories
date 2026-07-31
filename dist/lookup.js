@@ -62,35 +62,71 @@ export async function loadFeed(source = DEFAULT_FEED_URL, options = {}) {
         throw new Error(`failed to fetch feed: ${err instanceof Error ? err.message : String(err)}`);
     }
 }
+function appendIndexEntry(index, key, entry) {
+    const entries = index.get(key) ?? [];
+    entries.push(entry);
+    index.set(key, entries);
+}
+/** Build reusable exact-name indexes for a feed. Withdrawn entries are omitted. */
+export function buildArtifactIndex(feed) {
+    const byName = new Map();
+    const byEcosystemAndName = new Map();
+    for (const advisory of feed.advisories) {
+        if (advisory.withdrawn)
+            continue;
+        for (const artifact of advisory.artifacts) {
+            const normalizedName = artifact.name.toLowerCase();
+            const entry = { advisory, artifact };
+            appendIndexEntry(byName, normalizedName, entry);
+            appendIndexEntry(byEcosystemAndName, `${artifact.ecosystem}:${normalizedName}`, entry);
+        }
+    }
+    return { byName, byEcosystemAndName };
+}
 /**
- * Find advisories whose artifacts match any of the given names
- * (case-insensitive, across all ecosystems). Withdrawn advisories are skipped.
+ * Find advisories whose artifacts match any given name. Matching is
+ * case-insensitive and can be restricted to one ecosystem.
  */
-export function matchNames(feed, names) {
+export function matchNames(feed, names, options = {}) {
+    const index = options.index ?? buildArtifactIndex(feed);
     const matches = [];
     for (const query of names) {
         const q = query.toLowerCase();
-        for (const advisory of feed.advisories) {
-            if (advisory.withdrawn)
-                continue;
-            const hits = advisory.artifacts
-                .filter((a) => a.name.toLowerCase() === q)
-                .map((a) => a.name);
-            if (hits.length > 0) {
-                matches.push({ query, advisory, artifactNames: hits });
-            }
+        const entries = options.ecosystem
+            ? index.byEcosystemAndName.get(`${options.ecosystem}:${q}`) ?? []
+            : index.byName.get(q) ?? [];
+        const grouped = new Map();
+        for (const { advisory, artifact } of entries) {
+            const group = grouped.get(advisory.id) ?? {
+                advisory,
+                names: new Set(),
+                ecosystems: new Set(),
+            };
+            group.names.add(artifact.name);
+            group.ecosystems.add(artifact.ecosystem);
+            grouped.set(advisory.id, group);
+        }
+        for (const group of grouped.values()) {
+            matches.push({
+                query,
+                advisory: group.advisory,
+                artifactNames: [...group.names],
+                artifactEcosystems: [...group.ecosystems],
+            });
         }
     }
     return matches;
 }
 /** All non-withdrawn artifact names in the feed (for typosquat proximity). */
-export function collectKnownNames(feed) {
+export function collectKnownNames(feed, ecosystem) {
     const names = new Set();
     for (const adv of feed.advisories) {
         if (adv.withdrawn)
             continue;
-        for (const art of adv.artifacts)
-            names.add(art.name);
+        for (const art of adv.artifacts) {
+            if (!ecosystem || art.ecosystem === ecosystem)
+                names.add(art.name);
+        }
     }
     return [...names];
 }

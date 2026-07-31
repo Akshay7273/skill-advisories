@@ -1,5 +1,5 @@
 import type { Feed } from "./compile.js";
-import type { Advisory } from "./types.js";
+import type { Advisory, Ecosystem } from "./types.js";
 /** Known agent skill install locations, relative to the home directory. */
 export declare const KNOWN_SKILL_DIRS: string[];
 export declare function defaultSkillDirs(): string[];
@@ -15,6 +15,7 @@ export type ScanMatch = {
     query: string;
     advisory: Advisory;
     artifactNames: string[];
+    artifactEcosystems: Ecosystem[];
     matchedBy: "name" | "sha256";
     file?: string;
     sha256?: string;

@@ -37,7 +37,7 @@ to new ecosystem threats.
 
 Reduce false positives and false negatives as the database grows.
 
-- [ ] Ecosystem-aware lookup (`--ecosystem`) and indexed matching
+- [x] Ecosystem-aware lookup (`--ecosystem`) and indexed matching
 - [ ] Version-aware advisories and affected-version evaluation
 - [ ] Detect installed skill metadata instead of relying only on directory names
 - [ ] Configurable scan exclusions and bounded hashing concurrency

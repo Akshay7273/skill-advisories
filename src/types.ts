@@ -1,14 +1,17 @@
 export type AdvisoryType = "malicious" | "vulnerable" | "typosquat" | "compromised" | "test"
 
-export type Ecosystem =
-  | "claude-skill"
-  | "claude-plugin"
-  | "clawhub"
-  | "mcp-server"
-  | "npm"
-  | "pypi"
-  | "vscode-extension"
-  | "github-action"
+export const ECOSYSTEMS = [
+  "claude-skill",
+  "claude-plugin",
+  "clawhub",
+  "mcp-server",
+  "npm",
+  "pypi",
+  "vscode-extension",
+  "github-action",
+] as const
+
+export type Ecosystem = (typeof ECOSYSTEMS)[number]
 
 export type Behavior =
   | "credential-theft"

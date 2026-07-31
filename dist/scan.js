@@ -2,7 +2,7 @@ import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { hashSkillDir } from "./hash.js";
-import { collectKnownNames, matchHashes, matchNames } from "./lookup.js";
+import { buildArtifactIndex, collectKnownNames, matchHashes, matchNames } from "./lookup.js";
 import { findNearMatches } from "./typosquat.js";
 /** Known agent skill install locations, relative to the home directory. */
 export const KNOWN_SKILL_DIRS = [
@@ -38,6 +38,7 @@ export async function listInstalledSkills(dirs) {
 export async function scanSkills(dirs, feed) {
     const installed = await listInstalledSkills(dirs);
     const knownNames = collectKnownNames(feed);
+    const artifactIndex = buildArtifactIndex(feed);
     const matches = [];
     const warnings = [];
     const advisoryMap = new Map();
@@ -52,7 +53,7 @@ export async function scanSkills(dirs, feed) {
             let matchedInSkill = false;
             const matchedAdvisoryIds = new Set();
             // 1. Name match
-            const nameHits = matchNames(feed, [name]);
+            const nameHits = matchNames(feed, [name], { index: artifactIndex });
             for (const nh of nameHits) {
                 matchedInSkill = true;
                 matchedAdvisoryIds.add(nh.advisory.id);
@@ -60,6 +61,7 @@ export async function scanSkills(dirs, feed) {
                     query: name,
                     advisory: nh.advisory,
                     artifactNames: nh.artifactNames,
+                    artifactEcosystems: nh.artifactEcosystems,
                     matchedBy: "name",
                 });
             }
@@ -78,6 +80,7 @@ export async function scanSkills(dirs, feed) {
                                 query: name,
                                 advisory: adv,
                                 artifactNames: adv.artifacts.map((a) => a.name),
+                                artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
                                 matchedBy: "sha256",
                                 file: matchingFile?.file,
                                 sha256: hh.sha256,

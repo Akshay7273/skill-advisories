@@ -3,12 +3,29 @@ import { readFile } from "node:fs/promises"
 import pc from "picocolors"
 import { isFresh, readCache, writeCache } from "./cache.js"
 import type { Feed } from "./compile.js"
-import type { Advisory } from "./types.js"
+import type { Advisory, Artifact, Ecosystem } from "./types.js"
 
 export const DEFAULT_FEED_URL =
   "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json"
 
-export type Match = { query: string; advisory: Advisory; artifactNames: string[] }
+export type Match = {
+  query: string
+  advisory: Advisory
+  artifactNames: string[]
+  artifactEcosystems: Ecosystem[]
+}
+
+type ArtifactIndexEntry = { advisory: Advisory; artifact: Artifact }
+
+export type ArtifactIndex = {
+  byName: Map<string, ArtifactIndexEntry[]>
+  byEcosystemAndName: Map<string, ArtifactIndexEntry[]>
+}
+
+export type MatchNamesOptions = {
+  ecosystem?: Ecosystem
+  index?: ArtifactIndex
+}
 
 export type LoadFeedOptions = {
   offline?: boolean
@@ -87,22 +104,77 @@ export async function loadFeed(
   }
 }
 
+function appendIndexEntry(
+  index: Map<string, ArtifactIndexEntry[]>,
+  key: string,
+  entry: ArtifactIndexEntry,
+): void {
+  const entries = index.get(key) ?? []
+  entries.push(entry)
+  index.set(key, entries)
+}
+
+/** Build reusable exact-name indexes for a feed. Withdrawn entries are omitted. */
+export function buildArtifactIndex(feed: Feed): ArtifactIndex {
+  const byName = new Map<string, ArtifactIndexEntry[]>()
+  const byEcosystemAndName = new Map<string, ArtifactIndexEntry[]>()
+
+  for (const advisory of feed.advisories) {
+    if (advisory.withdrawn) continue
+    for (const artifact of advisory.artifacts) {
+      const normalizedName = artifact.name.toLowerCase()
+      const entry = { advisory, artifact }
+      appendIndexEntry(byName, normalizedName, entry)
+      appendIndexEntry(
+        byEcosystemAndName,
+        `${artifact.ecosystem}:${normalizedName}`,
+        entry,
+      )
+    }
+  }
+
+  return { byName, byEcosystemAndName }
+}
+
 /**
- * Find advisories whose artifacts match any of the given names
- * (case-insensitive, across all ecosystems). Withdrawn advisories are skipped.
+ * Find advisories whose artifacts match any given name. Matching is
+ * case-insensitive and can be restricted to one ecosystem.
  */
-export function matchNames(feed: Feed, names: string[]): Match[] {
+export function matchNames(
+  feed: Feed,
+  names: string[],
+  options: MatchNamesOptions = {},
+): Match[] {
+  const index = options.index ?? buildArtifactIndex(feed)
   const matches: Match[] = []
   for (const query of names) {
     const q = query.toLowerCase()
-    for (const advisory of feed.advisories) {
-      if (advisory.withdrawn) continue
-      const hits = advisory.artifacts
-        .filter((a) => a.name.toLowerCase() === q)
-        .map((a) => a.name)
-      if (hits.length > 0) {
-        matches.push({ query, advisory, artifactNames: hits })
+    const entries = options.ecosystem
+      ? index.byEcosystemAndName.get(`${options.ecosystem}:${q}`) ?? []
+      : index.byName.get(q) ?? []
+    const grouped = new Map<
+      string,
+      { advisory: Advisory; names: Set<string>; ecosystems: Set<Ecosystem> }
+    >()
+
+    for (const { advisory, artifact } of entries) {
+      const group = grouped.get(advisory.id) ?? {
+        advisory,
+        names: new Set<string>(),
+        ecosystems: new Set<Ecosystem>(),
       }
+      group.names.add(artifact.name)
+      group.ecosystems.add(artifact.ecosystem)
+      grouped.set(advisory.id, group)
+    }
+
+    for (const group of grouped.values()) {
+      matches.push({
+        query,
+        advisory: group.advisory,
+        artifactNames: [...group.names],
+        artifactEcosystems: [...group.ecosystems],
+      })
     }
   }
   return matches
@@ -114,11 +186,13 @@ export type HashMatch = {
 }
 
 /** All non-withdrawn artifact names in the feed (for typosquat proximity). */
-export function collectKnownNames(feed: Feed): string[] {
+export function collectKnownNames(feed: Feed, ecosystem?: Ecosystem): string[] {
 	const names = new Set<string>()
 	for (const adv of feed.advisories) {
 		if (adv.withdrawn) continue
-		for (const art of adv.artifacts) names.add(art.name)
+		for (const art of adv.artifacts) {
+			if (!ecosystem || art.ecosystem === ecosystem) names.add(art.name)
+		}
 	}
 	return [...names]
 }

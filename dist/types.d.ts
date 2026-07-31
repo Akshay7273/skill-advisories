@@ -1,5 +1,6 @@
 export type AdvisoryType = "malicious" | "vulnerable" | "typosquat" | "compromised" | "test";
-export type Ecosystem = "claude-skill" | "claude-plugin" | "clawhub" | "mcp-server" | "npm" | "pypi" | "vscode-extension" | "github-action";
+export declare const ECOSYSTEMS: readonly ["claude-skill", "claude-plugin", "clawhub", "mcp-server", "npm", "pypi", "vscode-extension", "github-action"];
+export type Ecosystem = (typeof ECOSYSTEMS)[number];
 export type Behavior = "credential-theft" | "data-exfiltration" | "backdoor" | "malware-dropper" | "prompt-injection" | "crypto-theft" | "spam" | "other";
 export type Severity = "critical" | "high" | "medium" | "low";
 export type Reference = {

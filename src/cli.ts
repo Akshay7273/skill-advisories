@@ -3,7 +3,8 @@ import { createRequire } from "node:module"
 import pc from "picocolors"
 import type { Feed } from "./compile.js"
 import { DEFAULT_FEED_URL, collectKnownNames, loadFeed, matchHashes, matchNames } from "./lookup.js"
-import type { Advisory } from "./types.js"
+import { ECOSYSTEMS } from "./types.js"
+import type { Advisory, Ecosystem } from "./types.js"
 import { defaultSkillDirs, scanSkills } from "./scan.js"
 import type { ScanMatch, ScanWarning } from "./scan.js"
 import { findNearMatches } from "./typosquat.js"
@@ -24,6 +25,7 @@ Options:
   --json           Alias for --format json
   --fail-on <sev>  Minimum severity to trigger exit code 1: low, medium, high, critical
   --feed <source>  Feed URL or local file path (default: official feed)
+  --ecosystem <id> Restrict name checks to one artifact ecosystem
   --sha256         Treat positional arguments as SHA-256 hashes
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
   --offline        Use cached feed only; fail if cache is missing
@@ -47,6 +49,7 @@ type ParsedArgs = {
   strict: boolean
   offline: boolean
   refresh: boolean
+  ecosystem?: Ecosystem
   failOn?: string
 }
 
@@ -58,6 +61,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let strict = false
   let offline = false
   let refresh = false
+  let ecosystem: Ecosystem | undefined = undefined
   let failOn: string | undefined = undefined
 
   const VALID_FORMATS = ["human", "json", "sarif"]
@@ -86,6 +90,13 @@ function parseArgs(argv: string[]): ParsedArgs {
       const value = argv[i]
       if (!value) fail("--feed requires a value")
       feed = value
+    } else if (arg === "--ecosystem") {
+      i++
+      const value = argv[i]
+      if (!value || !ECOSYSTEMS.includes(value as Ecosystem)) {
+        fail(`invalid ecosystem "${value ?? ""}", expected one of: ${ECOSYSTEMS.join(", ")}`)
+      }
+      ecosystem = value as Ecosystem
     } else if (arg === "--sha256") {
       sha256 = true
     } else if (arg === "--strict") {
@@ -112,7 +123,18 @@ function parseArgs(argv: string[]): ParsedArgs {
   }
 
   const [command, ...rest] = positionals
-  return { command, positionals: rest, format, feed, sha256, strict, offline, refresh, failOn }
+  return {
+    command,
+    positionals: rest,
+    format,
+    feed,
+    sha256,
+    strict,
+    offline,
+    refresh,
+    ecosystem,
+    failOn,
+  }
 }
 
 async function loadFeedOrFail(
@@ -156,6 +178,7 @@ function report(
               id: m.advisory.id,
               type: m.advisory.type,
               severity: m.advisory.severity,
+              ecosystems: m.artifactEcosystems,
               summary: m.advisory.summary,
               references: m.advisory.references.map((r) => r.url),
             }
@@ -192,12 +215,13 @@ function report(
         ),
       )
       for (const m of matches) {
+        const ecosystemDetail = ` [${m.artifactEcosystems.join(", ")}]`
         const matchedDetail =
           m.matchedBy === "sha256"
             ? ` (file hash ${m.file ? `${m.file}: ` : ""}${m.sha256})`
             : ""
         console.log(
-          `  ${pc.bold(m.query)} \u2192 ${m.advisory.id} [${m.advisory.severity}] ${m.advisory.summary}${matchedDetail}`,
+          `  ${pc.bold(m.query)}${ecosystemDetail} \u2192 ${m.advisory.id} [${m.advisory.severity}] ${m.advisory.summary}${matchedDetail}`,
         )
         for (const ref of m.advisory.references) {
           console.log(`      ${ref.url}`)
@@ -231,6 +255,7 @@ if (args.command === "check") {
   const feed = await loadFeedOrFail(args.feed, feedOptions)
 
   if (args.sha256) {
+    if (args.ecosystem) fail("--ecosystem cannot be combined with --sha256")
     for (const h of args.positionals) {
       if (!/^[0-9a-fA-F]{64}$/.test(h)) {
         fail(`invalid SHA-256 hash "${h}"`)
@@ -249,6 +274,7 @@ if (args.command === "check") {
             query: hh.sha256,
             advisory: adv,
             artifactNames: adv.artifacts.map((a) => a.name),
+            artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
             matchedBy: "sha256",
             sha256: hh.sha256,
           })
@@ -257,16 +283,17 @@ if (args.command === "check") {
     }
     report(args.positionals.length, matches, [], args.format, args.strict, args.failOn)
   } else {
-    const nameHits = matchNames(feed, args.positionals)
+    const nameHits = matchNames(feed, args.positionals, { ecosystem: args.ecosystem })
     const matches: ScanMatch[] = nameHits.map((nh) => ({
       query: nh.query,
       advisory: nh.advisory,
       artifactNames: nh.artifactNames,
+      artifactEcosystems: nh.artifactEcosystems,
       matchedBy: "name",
     }))
 
     const matchedQueries = new Set(matches.map((m) => m.query.toLowerCase()))
-    const knownNames = collectKnownNames(feed)
+    const knownNames = collectKnownNames(feed, args.ecosystem)
     const warnings: ScanWarning[] = []
 
     for (const q of args.positionals) {
@@ -285,6 +312,7 @@ if (args.command === "check") {
     report(args.positionals.length, matches, warnings, args.format, args.strict, args.failOn)
   }
 } else if (args.command === "scan") {
+  if (args.ecosystem) fail("--ecosystem is only supported by the check command")
   const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs()
   const feed = await loadFeedOrFail(args.feed, feedOptions)
   const result = await scanSkills(dirs, feed)

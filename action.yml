@@ -12,6 +12,10 @@ inputs:
     description: "Directory of installed skills to scan (each subdirectory name is treated as a skill name)."
     required: false
     default: ""
+  ecosystem:
+    description: "Restrict name checks to one ecosystem (for example claude-skill or mcp-server)."
+    required: false
+    default: ""
   feed:
     description: "Alternate feed URL or local file path. Defaults to the official feed."
     required: false
@@ -40,6 +44,9 @@ runs:
         fi
         if [ -n "${{ inputs.fail-on }}" ]; then
           ARGS+=(--fail-on "${{ inputs.fail-on }}")
+        fi
+        if [ -n "${{ inputs.ecosystem }}" ]; then
+          ARGS+=(--ecosystem "${{ inputs.ecosystem }}")
         fi
         if [ -n "${{ inputs.sarif-file }}" ]; then
           ARGS+=(--format sarif)

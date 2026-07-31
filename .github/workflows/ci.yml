@@ -46,6 +46,11 @@ jobs:
         uses: ./
         with:
           names: totally-safe-skill
+      - name: Ecosystem filter avoids unrelated matches
+        uses: ./
+        with:
+          names: omnicogg
+          ecosystem: npm
       - name: Known-bad name is detected
         id: detect
         continue-on-error: true

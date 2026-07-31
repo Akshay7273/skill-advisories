@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Ecosystem-aware name checks through the CLI and GitHub Action
+- Reusable artifact indexes for exact-name matching
+- Cross-platform CI coverage for Linux, Windows, and macOS
+
+### Changed
+- Installed dependencies are no longer tracked in Git
+
 ## [0.2.0] - 2026-07-22
 
 ### Added
