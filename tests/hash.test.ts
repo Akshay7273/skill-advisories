@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
-import { hashSkillDir, sha256File } from "../src/hash.js"
+import { hashSkillDir, hashSkillDirDetailed, sha256File } from "../src/hash.js"
 import { matchHashes } from "../src/lookup.js"
 
 const digest = (s: string) => createHash("sha256").update(s).digest("hex")
@@ -40,6 +40,36 @@ describe("hashSkillDir", () => {
 		expect(hashed).toEqual([
 			{ file: path.join("scripts", "run.sh"), sha256: digest("payload") },
 		])
+	})
+	it("reports oversized files and total-byte budget exhaustion", async () => {
+		const dir = await mkdtemp(path.join(tmpdir(), "ska-"))
+		await writeFile(path.join(dir, "a.txt"), "1234")
+		await writeFile(path.join(dir, "b.txt"), "1234")
+		await writeFile(path.join(dir, "large.txt"), "123456789")
+		const result = await hashSkillDirDetailed(dir, {
+			concurrency: 2,
+			maxFileBytes: 8,
+			maxFiles: 10,
+			maxTotalBytes: 4,
+		})
+		expect(result.files.map(({ file }) => file)).toEqual(["a.txt"])
+		expect(result.stats).toMatchObject({
+			discoveredFiles: 3,
+			hashedFiles: 1,
+			hashedBytes: 4,
+			skippedLargeFiles: 1,
+			skippedBudgetFiles: 1,
+			budgetExhausted: true,
+		})
+	})
+	it("supports explicit directory exclusions without following their contents", async () => {
+		const dir = await mkdtemp(path.join(tmpdir(), "ska-"))
+		await mkdir(path.join(dir, "vendor"))
+		await writeFile(path.join(dir, "SKILL.md"), "safe")
+		await writeFile(path.join(dir, "vendor", "payload.js"), "payload")
+		const result = await hashSkillDirDetailed(dir, { excludeDirectories: ["vendor"] })
+		expect(result.files.map(({ file }) => file)).toEqual(["SKILL.md"])
+		expect(result.stats.skippedExcludedDirectories).toBe(1)
 	})
 	it.skipIf(process.platform === "win32")(
 		"skips broken symlinks without throwing",

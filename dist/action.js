@@ -322,42 +322,137 @@ import { join } from "node:path";
 
 // src/hash.ts
 import { createHash as createHash3 } from "node:crypto";
-import { promises as fs2 } from "node:fs";
+import { createReadStream, promises as fs2 } from "node:fs";
 import path2 from "node:path";
-var MAX_HASHABLE_FILE_BYTES = 10 * 1024 * 1024;
-async function sha256File(filePath) {
-  const data = await fs2.readFile(filePath);
-  return createHash3("sha256").update(data).digest("hex");
+
+// src/concurrency.ts
+function positiveInteger(value, name) {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be a positive integer`);
+  }
+  return value;
 }
-async function hashSkillDir(dir) {
-  const out = [];
+async function mapConcurrent(values, concurrency, mapper) {
+  positiveInteger(concurrency, "concurrency");
+  const results = new Array(values.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= values.length) return;
+      results[index] = await mapper(values[index], index);
+    }
+  }
+  const workerCount = Math.min(concurrency, values.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
+// src/hash.ts
+var MAX_HASHABLE_FILE_BYTES = 10 * 1024 * 1024;
+var MAX_HASHED_FILES = 1e4;
+var MAX_HASHED_BYTES = 256 * 1024 * 1024;
+var DEFAULT_HASH_CONCURRENCY = 4;
+function boundedBytes(value, name) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${name} must be a non-negative safe integer`);
+  }
+  return value;
+}
+async function sha256File(filePath) {
+  const hash = createHash3("sha256");
+  for await (const chunk of createReadStream(filePath)) hash.update(chunk);
+  return hash.digest("hex");
+}
+async function hashSkillDirDetailed(dir, options = {}) {
+  const concurrency = positiveInteger(options.concurrency ?? DEFAULT_HASH_CONCURRENCY, "concurrency");
+  const maxFileBytes = boundedBytes(
+    options.maxFileBytes ?? MAX_HASHABLE_FILE_BYTES,
+    "maxFileBytes"
+  );
+  const maxFiles = positiveInteger(options.maxFiles ?? MAX_HASHED_FILES, "maxFiles");
+  const maxTotalBytes = boundedBytes(options.maxTotalBytes ?? MAX_HASHED_BYTES, "maxTotalBytes");
+  const excluded = new Set(options.excludeDirectories ?? []);
+  const candidates = [];
+  const stats = {
+    discoveredFiles: 0,
+    hashedFiles: 0,
+    hashedBytes: 0,
+    skippedLargeFiles: 0,
+    skippedBudgetFiles: 0,
+    skippedSymlinks: 0,
+    skippedExcludedDirectories: 0,
+    unreadableEntries: 0,
+    budgetExhausted: false
+  };
+  let reservedBytes = 0;
   async function walk(current) {
     let entries;
     try {
       entries = await fs2.readdir(current, { withFileTypes: true });
     } catch {
+      stats.unreadableEntries++;
       return;
     }
+    entries.sort((left, right) => left.name.localeCompare(right.name));
     for (const entry of entries) {
-      const full = path2.join(current, entry.name);
-      if (entry.isSymbolicLink()) continue;
-      if (entry.isDirectory()) {
-        await walk(full);
-      } else if (entry.isFile()) {
-        try {
-          const stat = await fs2.stat(full);
-          if (stat.size > MAX_HASHABLE_FILE_BYTES) continue;
-          out.push({
-            file: path2.relative(dir, full),
-            sha256: await sha256File(full)
-          });
-        } catch {
+      const fullPath = path2.join(current, entry.name);
+      if (entry.isSymbolicLink()) {
+        stats.skippedSymlinks++;
+      } else if (entry.isDirectory()) {
+        if (excluded.has(entry.name)) {
+          stats.skippedExcludedDirectories++;
+        } else {
+          await walk(fullPath);
         }
+      } else if (entry.isFile()) {
+        stats.discoveredFiles++;
+        let bytes;
+        try {
+          bytes = (await fs2.stat(fullPath)).size;
+        } catch {
+          stats.unreadableEntries++;
+          continue;
+        }
+        if (bytes > maxFileBytes) {
+          stats.skippedLargeFiles++;
+          continue;
+        }
+        if (candidates.length >= maxFiles || reservedBytes + bytes > maxTotalBytes) {
+          stats.skippedBudgetFiles++;
+          stats.budgetExhausted = true;
+          continue;
+        }
+        reservedBytes += bytes;
+        candidates.push({ fullPath, relativePath: path2.relative(dir, fullPath), bytes });
       }
     }
   }
   await walk(dir);
-  return out;
+  const hashed = await mapConcurrent(
+    candidates,
+    concurrency,
+    async (candidate) => {
+      try {
+        return {
+          file: candidate.relativePath,
+          sha256: await sha256File(candidate.fullPath),
+          bytes: candidate.bytes
+        };
+      } catch {
+        stats.unreadableEntries++;
+        return null;
+      }
+    }
+  );
+  const files = hashed.filter((value) => value !== null);
+  stats.hashedFiles = files.length;
+  stats.hashedBytes = files.reduce((total, file) => total + (file.bytes ?? 0), 0);
+  return { files, stats };
+}
+async function hashSkillDir(dir, options = {}) {
+  const result = await hashSkillDirDetailed(dir, options);
+  return result.files.map(({ file, sha256 }) => ({ file, sha256 }));
 }
 
 // src/metadata.ts
