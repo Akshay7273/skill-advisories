@@ -16,6 +16,7 @@ const options = {
   concurrency: 4,
   maxLookupMs: undefined,
   maxScanMs: undefined,
+  output: undefined,
 }
 
 function integer(value, flag) {
@@ -37,6 +38,7 @@ for (let index = 2; index < process.argv.length; index++) {
   else if (flag === "--concurrency") options.concurrency = integer(value, flag)
   else if (flag === "--max-lookup-ms") options.maxLookupMs = integer(value, flag)
   else if (flag === "--max-scan-ms") options.maxScanMs = integer(value, flag)
+  else if (flag === "--output") options.output = value
   else throw new Error(`unknown benchmark option: ${flag}`)
 }
 
@@ -127,7 +129,9 @@ const result = {
   },
 }
 
-console.log(JSON.stringify(result, null, 2))
+const serialized = `${JSON.stringify(result, null, 2)}\n`
+console.log(serialized.trimEnd())
+if (options.output) await writeFile(options.output, serialized)
 
 if (options.maxLookupMs !== undefined && lookupDurationMs > options.maxLookupMs) {
   process.stderr.write(`lookup exceeded ${options.maxLookupMs}ms regression ceiling\n`)
