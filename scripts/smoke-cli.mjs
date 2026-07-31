@@ -1,10 +1,12 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const cli = path.join(root, "dist", "cli.js")
+const packageVersion = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version
 
 function run(args) {
   return spawnSync(process.execPath, [cli, ...args], {
@@ -47,4 +49,8 @@ assert.equal(unaffected.status, 0, unaffected.stderr)
 const invalid = run(["check", "rankaj", "--ecosystem", "not-real"])
 assert.equal(invalid.status, 2)
 
-console.log("cli smoke: affected, unaffected, and validation paths passed")
+const version = run(["--version"])
+assert.equal(version.status, 0, version.stderr)
+assert.equal(version.stdout.trim(), packageVersion)
+
+console.log("cli smoke: version, affected, unaffected, and validation paths passed")
