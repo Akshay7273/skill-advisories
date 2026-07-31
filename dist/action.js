@@ -700,7 +700,7 @@ function parseArgs(argv) {
         fail(`invalid ecosystem "${value ?? ""}", expected one of: ${ECOSYSTEMS.join(", ")}`);
       }
       ecosystem = value;
-    } else if (arg === "--version") {
+    } else if (arg === "--version" && argv[i + 1] && !argv[i + 1].startsWith("-")) {
       i++;
       const value = argv[i];
       if (!value || value.trim() === "") fail("--version requires a value");

@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-31
+
+### Fixed
+- `--version` without a value reports the CLI version while `--version <value>` remains available for affected-version checks
+- CLI smoke coverage now guards both version-reporting and artifact-version behavior
+
 ## [0.5.0] - 2026-07-31
 
 ### Added
