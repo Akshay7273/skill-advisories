@@ -22,7 +22,8 @@ tooling.
 | `published`, `modified`, `withdrawn` | same OSV fields |
 | artifact ecosystem and name | `affected[].package` |
 | explicit artifact versions | `affected[].versions` |
-| references | `references` |
+| reference type and url | `references` |
+| reference provenance | `database_specific.reference_provenance` |
 | type, severity, behaviors, credits | `database_specific` |
 | publisher and SHA-256 hashes | `affected[].database_specific` |
 
@@ -30,6 +31,12 @@ The wildcard native version (`"*"`) is represented by omitting OSV `versions`,
 which indicates the advisory applies without an explicit version allow-list.
 Agent-specific ecosystems use readable OSV ecosystem identifiers while their
 canonical SKA identifier is retained as `native_ecosystem`.
+
+OSV reference entries carry only `type` and `url`, so the optional provenance
+fields described in [evidence provenance](evidence-provenance.md) are stripped
+from `references` and re-emitted as `database_specific.reference_provenance`
+entries keyed by `url`. Consumers join the two arrays on that key. The field is
+omitted entirely when no reference in the advisory carries provenance.
 
 ## Verification
 

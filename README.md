@@ -34,6 +34,7 @@ Consume the database directly — no install needed:
 
 See the [OSV export and verification guide](docs/osv-export.md) for field mapping and integrity checks.
 Incremental consumers should follow the [compact feed and delta protocol](docs/feed-updates.md).
+References may carry archival [evidence provenance](docs/evidence-provenance.md).
 
 ## CLI
 

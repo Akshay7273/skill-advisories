@@ -29,6 +29,7 @@ npm run compile
 3. **SHA-256 only** in the `sha256` field. Hashes of other types (e.g. MD5 from older reports) belong in the `details` prose, not in the hash array.
 4. **Never guess identities.** If a report redacts a publisher name, leave `publisher` unset.
 5. **Summaries are factual.** State what was observed and by whom; avoid speculation about intent beyond what the cited reference establishes.
+6. **Record provenance you actually have.** `retrieved`, `content_sha256`, and `archive_url` are optional, but `retrieved` must be the time you really fetched the page. See [evidence provenance](docs/evidence-provenance.md).
 
 ## Development
 
