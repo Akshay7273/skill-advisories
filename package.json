@@ -20,8 +20,9 @@
     "validate": "tsx src/validate-cli.ts",
     "compile": "tsx src/compile-cli.ts",
     "build": "tsc && esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/action.js",
+    "smoke": "node scripts/smoke-cli.mjs",
     "test": "vitest run",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run build && npm test && npm run smoke"
   },
   "repository": {
     "type": "git",
