@@ -98,3 +98,67 @@ describe("reference provenance", () => {
     ).toEqual(["references[1].url must be an absolute http(s) URL"])
   })
 })
+
+describe("reference hygiene", () => {
+  it("rejects the same url cited twice", () => {
+    expect(
+      problemsFor([
+        { type: "REPORT", url: "https://example.com/report" },
+        { type: "ARTICLE", url: "https://example.com/report" },
+      ]),
+    ).toEqual(["references[1].url duplicates an earlier reference"])
+  })
+
+  it("treats a fragment-only difference as the same page", () => {
+    expect(
+      problemsFor([
+        { type: "REPORT", url: "https://example.com/report" },
+        { type: "REPORT", url: "https://example.com/report#findings" },
+      ]),
+    ).toEqual(["references[1].url duplicates an earlier reference"])
+  })
+
+  it("treats a trailing slash as the same page", () => {
+    expect(
+      problemsFor([
+        { type: "REPORT", url: "https://example.com/report/" },
+        { type: "REPORT", url: "https://example.com/report" },
+      ]),
+    ).toEqual(["references[1].url duplicates an earlier reference"])
+  })
+
+  it("keeps distinct paths on one host separate", () => {
+    expect(
+      problemsFor([
+        { type: "REPORT", url: "https://example.com/part-1" },
+        { type: "REPORT", url: "https://example.com/part-2" },
+      ]),
+    ).toEqual([])
+  })
+
+  it("rejects a bare domain as evidence", () => {
+    expect(problemsFor([{ type: "WEB", url: "https://example.com" }])).toEqual([
+      "references[0].url cites a bare domain; link the specific report",
+    ])
+  })
+
+  it("rejects a bare domain written with a trailing slash", () => {
+    expect(problemsFor([{ type: "WEB", url: "https://example.com/" }])).toEqual([
+      "references[0].url cites a bare domain; link the specific report",
+    ])
+  })
+
+  it("accepts a root path carrying a query", () => {
+    expect(problemsFor([{ type: "WEB", url: "https://example.com/?id=4172" }])).toEqual([])
+  })
+
+  it("allows separate advisories to cite one campaign writeup", () => {
+    const shared = "https://example.com/campaign-writeup"
+    const [first] = withReferences([{ type: "REPORT", url: shared }])
+    const second = {
+      file: "SKA-2026-0002.json",
+      advisory: { ...first.advisory, id: "SKA-2026-0002" },
+    }
+    expect(findReferenceProblems([first, second], NOW)).toEqual([])
+  })
+})
