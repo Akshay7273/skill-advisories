@@ -6,7 +6,7 @@ import { DEFAULT_FEED_URL, collectKnownNames, loadFeed, matchHashes, matchNames 
 import { ECOSYSTEMS } from "./types.js"
 import type { Advisory, Ecosystem } from "./types.js"
 import { defaultSkillDirs, scanSkills } from "./scan.js"
-import type { ScanMatch, ScanWarning } from "./scan.js"
+import type { ScanMatch, ScanStats, ScanWarning } from "./scan.js"
 import { findNearMatches } from "./typosquat.js"
 import { buildSarif, meetsThreshold } from "./sarif.js"
 import type { SarifFinding } from "./sarif.js"
@@ -31,6 +31,12 @@ Options:
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
   --offline        Use cached feed only; fail if cache is missing
   --refresh        Ignore cached feed; force network download
+  --concurrency <n> Scan this many artifacts concurrently (default: 4)
+  --hash-concurrency <n> Hash this many files per artifact concurrently (default: 4)
+  --max-file-bytes <n> Skip files larger than this many bytes (default: 10485760)
+  --max-files <n> Hash at most this many files per artifact (default: 10000)
+  --max-total-bytes <n> Hash at most this many bytes per artifact (default: 268435456)
+  --exclude-dir <name> Skip an exact directory basename; may be repeated
   --help, -h       Show this help
   --version, -v    Show version
 
@@ -53,6 +59,12 @@ type ParsedArgs = {
   ecosystem?: Ecosystem
   version?: string
   failOn?: string
+  scanConcurrency?: number
+  hashConcurrency?: number
+  maxFileBytes?: number
+  maxFiles?: number
+  maxTotalBytes?: number
+  excludeDirectories: string[]
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -66,11 +78,27 @@ function parseArgs(argv: string[]): ParsedArgs {
   let ecosystem: Ecosystem | undefined = undefined
   let version: string | undefined = undefined
   let failOn: string | undefined = undefined
+  let scanConcurrency: number | undefined
+  let hashConcurrency: number | undefined
+  let maxFileBytes: number | undefined
+  let maxFiles: number | undefined
+  let maxTotalBytes: number | undefined
+  const excludeDirectories: string[] = []
 
   const VALID_FORMATS = ["human", "json", "sarif"]
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"]
+  let i = 0
 
-  for (let i = 0; i < argv.length; i++) {
+  function readInteger(flag: string, allowZero = false): number {
+    const raw = argv[++i]
+    const value = Number(raw)
+    if (!raw || !Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
+      fail(`${flag} requires ${allowZero ? "a non-negative" : "a positive"} integer`)
+    }
+    return value
+  }
+
+  for (; i < argv.length; i++) {
     const arg = argv[i]
     if (arg === "--json") {
       format = "json"
@@ -113,6 +141,23 @@ function parseArgs(argv: string[]): ParsedArgs {
       offline = true
     } else if (arg === "--refresh") {
       refresh = true
+    } else if (arg === "--concurrency") {
+      scanConcurrency = readInteger(arg)
+    } else if (arg === "--hash-concurrency") {
+      hashConcurrency = readInteger(arg)
+    } else if (arg === "--max-file-bytes") {
+      maxFileBytes = readInteger(arg, true)
+    } else if (arg === "--max-files") {
+      maxFiles = readInteger(arg)
+    } else if (arg === "--max-total-bytes") {
+      maxTotalBytes = readInteger(arg, true)
+    } else if (arg === "--exclude-dir") {
+      const value = argv[++i]
+      if (!value || value.trim() === "") fail("--exclude-dir requires a directory basename")
+      if (value.includes("/") || value.includes("\\")) {
+        fail("--exclude-dir accepts a basename, not a path")
+      }
+      excludeDirectories.push(value)
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP)
       process.exit(0)
@@ -143,6 +188,12 @@ function parseArgs(argv: string[]): ParsedArgs {
     ecosystem,
     version,
     failOn,
+    scanConcurrency,
+    hashConcurrency,
+    maxFileBytes,
+    maxFiles,
+    maxTotalBytes,
+    excludeDirectories,
   }
 }
 
@@ -164,6 +215,7 @@ function report(
   format: "human" | "json" | "sarif",
   strict: boolean,
   failOn?: string,
+  scanStats?: ScanStats,
 ): void {
   if (format === "sarif") {
     const findings: SarifFinding[] = matches.map((m) => ({
@@ -203,12 +255,20 @@ function report(
             similarTo: w.similarTo,
             distance: w.distance,
           })),
+          ...(scanStats ? { scan: scanStats } : {}),
         },
         null,
         2,
       ),
     )
   } else {
+    if (scanStats && (scanStats.budgetExhausted || scanStats.unreadableEntries > 0)) {
+      console.error(
+        pc.yellow(
+          `\u26a0 scan incomplete: ${scanStats.skippedBudgetFiles} file(s) exceeded budgets; ${scanStats.unreadableEntries} entry/entries were unreadable`,
+        ),
+      )
+    }
     for (const w of warnings) {
       console.error(
         pc.yellow(
@@ -262,6 +322,16 @@ if (!args.command) {
 const feedOptions = { offline: args.offline, refresh: args.refresh, strict: args.strict }
 
 if (args.command === "check") {
+  if (
+    args.scanConcurrency !== undefined ||
+    args.hashConcurrency !== undefined ||
+    args.maxFileBytes !== undefined ||
+    args.maxFiles !== undefined ||
+    args.maxTotalBytes !== undefined ||
+    args.excludeDirectories.length > 0
+  ) {
+    fail("scan resource options are only supported by the scan command")
+  }
   if (args.positionals.length === 0) fail("check requires at least one skill name or hash")
   const feed = await loadFeedOrFail(args.feed, feedOptions)
 
@@ -331,7 +401,17 @@ if (args.command === "check") {
   if (args.version) fail("--version is only supported by the check command")
   const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs()
   const feed = await loadFeedOrFail(args.feed, feedOptions)
-  const result = await scanSkills(dirs, feed, { ecosystem: args.ecosystem })
+  const result = await scanSkills(dirs, feed, {
+    ecosystem: args.ecosystem,
+    concurrency: args.scanConcurrency,
+    hash: {
+      concurrency: args.hashConcurrency,
+      maxFileBytes: args.maxFileBytes,
+      maxFiles: args.maxFiles,
+      maxTotalBytes: args.maxTotalBytes,
+      excludeDirectories: args.excludeDirectories,
+    },
+  })
 
   if (args.format === "human") {
     for (const d of result.installed) {
@@ -342,7 +422,15 @@ if (args.command === "check") {
     }
   }
 
-  report(result.scannedCount, result.matches, result.warnings, args.format, args.strict, args.failOn)
+  report(
+    result.scannedCount,
+    result.matches,
+    result.warnings,
+    args.format,
+    args.strict,
+    args.failOn,
+    result.stats,
+  )
 } else {
   fail(`unknown command "${args.command}"`)
 }

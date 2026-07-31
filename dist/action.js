@@ -320,11 +320,6 @@ import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-// src/hash.ts
-import { createHash as createHash3 } from "node:crypto";
-import { createReadStream, promises as fs2 } from "node:fs";
-import path2 from "node:path";
-
 // src/concurrency.ts
 function positiveInteger(value, name) {
   if (!Number.isSafeInteger(value) || value < 1) {
@@ -349,6 +344,9 @@ async function mapConcurrent(values, concurrency, mapper) {
 }
 
 // src/hash.ts
+import { createHash as createHash3 } from "node:crypto";
+import { createReadStream, promises as fs2 } from "node:fs";
+import path2 from "node:path";
 var MAX_HASHABLE_FILE_BYTES = 10 * 1024 * 1024;
 var MAX_HASHED_FILES = 1e4;
 var MAX_HASHED_BYTES = 256 * 1024 * 1024;
@@ -449,10 +447,6 @@ async function hashSkillDirDetailed(dir, options = {}) {
   stats.hashedFiles = files.length;
   stats.hashedBytes = files.reduce((total, file) => total + (file.bytes ?? 0), 0);
   return { files, stats };
-}
-async function hashSkillDir(dir, options = {}) {
-  const result = await hashSkillDirDetailed(dir, options);
-  return result.files.map(({ file, sha256 }) => ({ file, sha256 }));
 }
 
 // src/metadata.ts
@@ -564,20 +558,23 @@ var KNOWN_SKILL_DIRS = [
   ".clawdbot/skills",
   ".moltbot/skills"
 ];
+var DEFAULT_SCAN_CONCURRENCY = 4;
+var DEFAULT_METADATA_CONCURRENCY = 8;
 function defaultSkillDirs() {
   return KNOWN_SKILL_DIRS.map((d) => join(homedir(), d));
 }
-async function listInstalledSkills(dirs, ecosystem) {
+async function listInstalledSkills(dirs, ecosystem, concurrency = DEFAULT_METADATA_CONCURRENCY) {
+  positiveInteger(concurrency, "metadata concurrency");
   const found = [];
   for (const dir of dirs) {
     try {
       const entries = await readdir(dir, { withFileTypes: true });
       const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
       const inferredEcosystem = ecosystem ?? inferEcosystemFromDirectory(dir);
-      const skills = await Promise.all(
-        folders.map(
-          (name) => detectSkillMetadata(join(dir, name), name, inferredEcosystem)
-        )
+      const skills = await mapConcurrent(
+        folders.map((name) => ({ path: join(dir, name), name })),
+        concurrency,
+        ({ path: path4, name }) => detectSkillMetadata(path4, name, inferredEcosystem)
       );
       found.push({ dir, names: skills.map((skill) => skill.name), skills });
     } catch {
@@ -586,80 +583,116 @@ async function listInstalledSkills(dirs, ecosystem) {
   return found;
 }
 async function scanSkills(dirs, feed, options = {}) {
-  const installed = await listInstalledSkills(dirs, options.ecosystem);
+  const concurrency = positiveInteger(
+    options.concurrency ?? DEFAULT_SCAN_CONCURRENCY,
+    "scan concurrency"
+  );
+  const installed = await listInstalledSkills(
+    dirs,
+    options.ecosystem,
+    options.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY
+  );
   const knownNames = collectKnownNames(feed);
   const artifactIndex = buildArtifactIndex(feed);
-  const matches = [];
-  const warnings = [];
   const advisoryMap = /* @__PURE__ */ new Map();
   for (const adv of feed.advisories) {
     advisoryMap.set(adv.id, adv);
   }
-  let scannedCount = 0;
-  for (const group of installed) {
-    for (const skill of group.skills) {
-      const { name, version, ecosystem } = skill;
-      scannedCount++;
-      const skillPath = join(group.dir, name);
-      let matchedInSkill = false;
-      const matchedAdvisoryIds = /* @__PURE__ */ new Set();
-      const nameHits = matchNames(feed, [name], {
-        index: artifactIndex,
-        ecosystem,
-        version
+  const skills = installed.flatMap((group) => group.skills);
+  const artifactResults = await mapConcurrent(skills, concurrency, async (skill) => {
+    const { name, version, ecosystem } = skill;
+    const skillPath = skill.path;
+    const matches2 = [];
+    const warnings2 = [];
+    let matchedInSkill = false;
+    const matchedAdvisoryIds = /* @__PURE__ */ new Set();
+    const nameHits = matchNames(feed, [name], {
+      index: artifactIndex,
+      ecosystem,
+      version
+    });
+    for (const nh of nameHits) {
+      matchedInSkill = true;
+      matchedAdvisoryIds.add(nh.advisory.id);
+      matches2.push({
+        query: name,
+        advisory: nh.advisory,
+        artifactNames: nh.artifactNames,
+        artifactEcosystems: nh.artifactEcosystems,
+        version,
+        matchedBy: "name"
       });
-      for (const nh of nameHits) {
-        matchedInSkill = true;
-        matchedAdvisoryIds.add(nh.advisory.id);
-        matches.push({
-          query: name,
-          advisory: nh.advisory,
-          artifactNames: nh.artifactNames,
-          artifactEcosystems: nh.artifactEcosystems,
-          version,
-          matchedBy: "name"
-        });
-      }
-      const hashedFiles = await hashSkillDir(skillPath);
-      const hashHits = matchHashes(
-        feed,
-        hashedFiles.map((h) => h.sha256)
-      );
-      for (const hh of hashHits) {
-        const matchingFile = hashedFiles.find((hf) => hf.sha256 === hh.sha256);
-        for (const advId of hh.advisoryIds) {
-          if (!matchedAdvisoryIds.has(advId)) {
-            matchedInSkill = true;
-            matchedAdvisoryIds.add(advId);
-            const adv = advisoryMap.get(advId);
-            if (adv) {
-              matches.push({
-                query: name,
-                advisory: adv,
-                artifactNames: adv.artifacts.map((a) => a.name),
-                artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
-                version,
-                matchedBy: "sha256",
-                file: matchingFile?.file,
-                sha256: hh.sha256
-              });
-            }
+    }
+    const hashResult = await hashSkillDirDetailed(skillPath, options.hash);
+    const hashedFiles = hashResult.files;
+    const hashHits = matchHashes(
+      feed,
+      hashedFiles.map((h) => h.sha256)
+    );
+    for (const hh of hashHits) {
+      const matchingFile = hashedFiles.find((hf) => hf.sha256 === hh.sha256);
+      for (const advId of hh.advisoryIds) {
+        if (!matchedAdvisoryIds.has(advId)) {
+          matchedInSkill = true;
+          matchedAdvisoryIds.add(advId);
+          const adv = advisoryMap.get(advId);
+          if (adv) {
+            matches2.push({
+              query: name,
+              advisory: adv,
+              artifactNames: adv.artifacts.map((a) => a.name),
+              artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
+              version,
+              matchedBy: "sha256",
+              file: matchingFile?.file,
+              sha256: hh.sha256
+            });
           }
         }
       }
-      if (!matchedInSkill) {
-        const near = findNearMatches(name, knownNames);
-        for (const nm of near) {
-          warnings.push({
-            name,
-            similarTo: nm.name,
-            distance: nm.distance
-          });
-        }
+    }
+    if (!matchedInSkill) {
+      const near = findNearMatches(name, knownNames);
+      for (const nm of near) {
+        warnings2.push({
+          name,
+          similarTo: nm.name,
+          distance: nm.distance
+        });
       }
     }
+    return { matches: matches2, warnings: warnings2, hashStats: hashResult.stats };
+  });
+  const matches = artifactResults.flatMap((result) => result.matches);
+  const warnings = artifactResults.flatMap((result) => result.warnings);
+  const stats = {
+    discoveredFiles: 0,
+    hashedFiles: 0,
+    hashedBytes: 0,
+    skippedLargeFiles: 0,
+    skippedBudgetFiles: 0,
+    skippedSymlinks: 0,
+    skippedExcludedDirectories: 0,
+    unreadableEntries: 0,
+    budgetExhausted: false,
+    artifactsWithExhaustedBudgets: 0
+  };
+  for (const result of artifactResults) {
+    const hashStats = result.hashStats;
+    stats.discoveredFiles += hashStats.discoveredFiles;
+    stats.hashedFiles += hashStats.hashedFiles;
+    stats.hashedBytes += hashStats.hashedBytes;
+    stats.skippedLargeFiles += hashStats.skippedLargeFiles;
+    stats.skippedBudgetFiles += hashStats.skippedBudgetFiles;
+    stats.skippedSymlinks += hashStats.skippedSymlinks;
+    stats.skippedExcludedDirectories += hashStats.skippedExcludedDirectories;
+    stats.unreadableEntries += hashStats.unreadableEntries;
+    if (hashStats.budgetExhausted) {
+      stats.budgetExhausted = true;
+      stats.artifactsWithExhaustedBudgets++;
+    }
   }
-  return { installed, scannedCount, matches, warnings };
+  return { installed, scannedCount: skills.length, matches, warnings, stats };
 }
 
 // src/sarif.ts
@@ -744,6 +777,12 @@ Options:
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
   --offline        Use cached feed only; fail if cache is missing
   --refresh        Ignore cached feed; force network download
+  --concurrency <n> Scan this many artifacts concurrently (default: 4)
+  --hash-concurrency <n> Hash this many files per artifact concurrently (default: 4)
+  --max-file-bytes <n> Skip files larger than this many bytes (default: 10485760)
+  --max-files <n> Hash at most this many files per artifact (default: 10000)
+  --max-total-bytes <n> Hash at most this many bytes per artifact (default: 268435456)
+  --exclude-dir <name> Skip an exact directory basename; may be repeated
   --help, -h       Show this help
   --version, -v    Show version
 
@@ -763,9 +802,24 @@ function parseArgs(argv) {
   let ecosystem = void 0;
   let version = void 0;
   let failOn = void 0;
+  let scanConcurrency;
+  let hashConcurrency;
+  let maxFileBytes;
+  let maxFiles;
+  let maxTotalBytes;
+  const excludeDirectories = [];
   const VALID_FORMATS = ["human", "json", "sarif"];
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
-  for (let i = 0; i < argv.length; i++) {
+  let i = 0;
+  function readInteger(flag, allowZero = false) {
+    const raw = argv[++i];
+    const value = Number(raw);
+    if (!raw || !Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
+      fail(`${flag} requires ${allowZero ? "a non-negative" : "a positive"} integer`);
+    }
+    return value;
+  }
+  for (; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--json") {
       format = "json";
@@ -808,6 +862,23 @@ function parseArgs(argv) {
       offline = true;
     } else if (arg === "--refresh") {
       refresh = true;
+    } else if (arg === "--concurrency") {
+      scanConcurrency = readInteger(arg);
+    } else if (arg === "--hash-concurrency") {
+      hashConcurrency = readInteger(arg);
+    } else if (arg === "--max-file-bytes") {
+      maxFileBytes = readInteger(arg, true);
+    } else if (arg === "--max-files") {
+      maxFiles = readInteger(arg);
+    } else if (arg === "--max-total-bytes") {
+      maxTotalBytes = readInteger(arg, true);
+    } else if (arg === "--exclude-dir") {
+      const value = argv[++i];
+      if (!value || value.trim() === "") fail("--exclude-dir requires a directory basename");
+      if (value.includes("/") || value.includes("\\")) {
+        fail("--exclude-dir accepts a basename, not a path");
+      }
+      excludeDirectories.push(value);
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP);
       process.exit(0);
@@ -835,7 +906,13 @@ function parseArgs(argv) {
     refresh,
     ecosystem,
     version,
-    failOn
+    failOn,
+    scanConcurrency,
+    hashConcurrency,
+    maxFileBytes,
+    maxFiles,
+    maxTotalBytes,
+    excludeDirectories
   };
 }
 async function loadFeedOrFail(source, options) {
@@ -845,7 +922,7 @@ async function loadFeedOrFail(source, options) {
     fail(err instanceof Error ? err.message : String(err));
   }
 }
-function report(checked, matches, warnings, format, strict, failOn) {
+function report(checked, matches, warnings, format, strict, failOn, scanStats) {
   if (format === "sarif") {
     const findings = matches.map((m) => ({
       advisoryId: m.advisory.id,
@@ -883,13 +960,21 @@ function report(checked, matches, warnings, format, strict, failOn) {
             name: w.name,
             similarTo: w.similarTo,
             distance: w.distance
-          }))
+          })),
+          ...scanStats ? { scan: scanStats } : {}
         },
         null,
         2
       )
     );
   } else {
+    if (scanStats && (scanStats.budgetExhausted || scanStats.unreadableEntries > 0)) {
+      console.error(
+        import_picocolors2.default.yellow(
+          `\u26A0 scan incomplete: ${scanStats.skippedBudgetFiles} file(s) exceeded budgets; ${scanStats.unreadableEntries} entry/entries were unreadable`
+        )
+      );
+    }
     for (const w of warnings) {
       console.error(
         import_picocolors2.default.yellow(
@@ -933,6 +1018,9 @@ if (!args.command) {
 }
 var feedOptions = { offline: args.offline, refresh: args.refresh, strict: args.strict };
 if (args.command === "check") {
+  if (args.scanConcurrency !== void 0 || args.hashConcurrency !== void 0 || args.maxFileBytes !== void 0 || args.maxFiles !== void 0 || args.maxTotalBytes !== void 0 || args.excludeDirectories.length > 0) {
+    fail("scan resource options are only supported by the scan command");
+  }
   if (args.positionals.length === 0) fail("check requires at least one skill name or hash");
   const feed = await loadFeedOrFail(args.feed, feedOptions);
   if (args.sha256) {
@@ -997,7 +1085,17 @@ if (args.command === "check") {
   if (args.version) fail("--version is only supported by the check command");
   const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs();
   const feed = await loadFeedOrFail(args.feed, feedOptions);
-  const result = await scanSkills(dirs, feed, { ecosystem: args.ecosystem });
+  const result = await scanSkills(dirs, feed, {
+    ecosystem: args.ecosystem,
+    concurrency: args.scanConcurrency,
+    hash: {
+      concurrency: args.hashConcurrency,
+      maxFileBytes: args.maxFileBytes,
+      maxFiles: args.maxFiles,
+      maxTotalBytes: args.maxTotalBytes,
+      excludeDirectories: args.excludeDirectories
+    }
+  });
   if (args.format === "human") {
     for (const d of result.installed) {
       console.log(import_picocolors2.default.dim(`scanning ${d.dir} (${d.names.length} skills)`));
@@ -1006,7 +1104,15 @@ if (args.command === "check") {
       console.log(import_picocolors2.default.yellow("no skill directories found"));
     }
   }
-  report(result.scannedCount, result.matches, result.warnings, args.format, args.strict, args.failOn);
+  report(
+    result.scannedCount,
+    result.matches,
+    result.warnings,
+    args.format,
+    args.strict,
+    args.failOn,
+    result.stats
+  );
 } else {
   fail(`unknown command "${args.command}"`);
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -53,4 +54,28 @@ const version = run(["--version"])
 assert.equal(version.status, 0, version.stderr)
 assert.equal(version.stdout.trim(), packageVersion)
 
-console.log("cli smoke: version, affected, unaffected, and validation paths passed")
+const scanRoot = mkdtempSync(path.join(tmpdir(), "ska-smoke-"))
+try {
+  const artifact = path.join(scanRoot, "bounded-smoke-artifact")
+  mkdirSync(artifact)
+  writeFileSync(path.join(artifact, "a.txt"), "a")
+  writeFileSync(path.join(artifact, "b.txt"), "b")
+  const bounded = run([
+    "scan",
+    scanRoot,
+    "--feed",
+    "feed/feed.json",
+    "--max-files",
+    "1",
+    "--json",
+  ])
+  assert.equal(bounded.status, 0, bounded.stderr)
+  const boundedResult = JSON.parse(bounded.stdout)
+  assert.equal(boundedResult.scan.hashedFiles, 1)
+  assert.equal(boundedResult.scan.skippedBudgetFiles, 1)
+  assert.equal(boundedResult.scan.budgetExhausted, true)
+} finally {
+  rmSync(scanRoot, { recursive: true, force: true })
+}
+
+console.log("cli smoke: version, detection, validation, and bounded scan paths passed")

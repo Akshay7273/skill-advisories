@@ -25,6 +25,12 @@ Options:
   --strict         Exit code 1 on typosquat warnings even if no exact match is found
   --offline        Use cached feed only; fail if cache is missing
   --refresh        Ignore cached feed; force network download
+  --concurrency <n> Scan this many artifacts concurrently (default: 4)
+  --hash-concurrency <n> Hash this many files per artifact concurrently (default: 4)
+  --max-file-bytes <n> Skip files larger than this many bytes (default: 10485760)
+  --max-files <n> Hash at most this many files per artifact (default: 10000)
+  --max-total-bytes <n> Hash at most this many bytes per artifact (default: 268435456)
+  --exclude-dir <name> Skip an exact directory basename; may be repeated
   --help, -h       Show this help
   --version, -v    Show version
 
@@ -44,9 +50,24 @@ function parseArgs(argv) {
     let ecosystem = undefined;
     let version = undefined;
     let failOn = undefined;
+    let scanConcurrency;
+    let hashConcurrency;
+    let maxFileBytes;
+    let maxFiles;
+    let maxTotalBytes;
+    const excludeDirectories = [];
     const VALID_FORMATS = ["human", "json", "sarif"];
     const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
-    for (let i = 0; i < argv.length; i++) {
+    let i = 0;
+    function readInteger(flag, allowZero = false) {
+        const raw = argv[++i];
+        const value = Number(raw);
+        if (!raw || !Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) {
+            fail(`${flag} requires ${allowZero ? "a non-negative" : "a positive"} integer`);
+        }
+        return value;
+    }
+    for (; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === "--json") {
             format = "json";
@@ -101,6 +122,30 @@ function parseArgs(argv) {
         else if (arg === "--refresh") {
             refresh = true;
         }
+        else if (arg === "--concurrency") {
+            scanConcurrency = readInteger(arg);
+        }
+        else if (arg === "--hash-concurrency") {
+            hashConcurrency = readInteger(arg);
+        }
+        else if (arg === "--max-file-bytes") {
+            maxFileBytes = readInteger(arg, true);
+        }
+        else if (arg === "--max-files") {
+            maxFiles = readInteger(arg);
+        }
+        else if (arg === "--max-total-bytes") {
+            maxTotalBytes = readInteger(arg, true);
+        }
+        else if (arg === "--exclude-dir") {
+            const value = argv[++i];
+            if (!value || value.trim() === "")
+                fail("--exclude-dir requires a directory basename");
+            if (value.includes("/") || value.includes("\\")) {
+                fail("--exclude-dir accepts a basename, not a path");
+            }
+            excludeDirectories.push(value);
+        }
         else if (arg === "--help" || arg === "-h") {
             console.log(HELP);
             process.exit(0);
@@ -132,6 +177,12 @@ function parseArgs(argv) {
         ecosystem,
         version,
         failOn,
+        scanConcurrency,
+        hashConcurrency,
+        maxFileBytes,
+        maxFiles,
+        maxTotalBytes,
+        excludeDirectories,
     };
 }
 async function loadFeedOrFail(source, options) {
@@ -142,7 +193,7 @@ async function loadFeedOrFail(source, options) {
         fail(err instanceof Error ? err.message : String(err));
     }
 }
-function report(checked, matches, warnings, format, strict, failOn) {
+function report(checked, matches, warnings, format, strict, failOn, scanStats) {
     if (format === "sarif") {
         const findings = matches.map((m) => ({
             advisoryId: m.advisory.id,
@@ -183,9 +234,13 @@ function report(checked, matches, warnings, format, strict, failOn) {
                 similarTo: w.similarTo,
                 distance: w.distance,
             })),
+            ...(scanStats ? { scan: scanStats } : {}),
         }, null, 2));
     }
     else {
+        if (scanStats && (scanStats.budgetExhausted || scanStats.unreadableEntries > 0)) {
+            console.error(pc.yellow(`\u26a0 scan incomplete: ${scanStats.skippedBudgetFiles} file(s) exceeded budgets; ${scanStats.unreadableEntries} entry/entries were unreadable`));
+        }
         for (const w of warnings) {
             console.error(pc.yellow(`\u26a0 possible typosquat: "${w.name}" is ${w.distance} edit(s) away from known-bad "${w.similarTo}"`));
         }
@@ -223,6 +278,14 @@ if (!args.command) {
 }
 const feedOptions = { offline: args.offline, refresh: args.refresh, strict: args.strict };
 if (args.command === "check") {
+    if (args.scanConcurrency !== undefined ||
+        args.hashConcurrency !== undefined ||
+        args.maxFileBytes !== undefined ||
+        args.maxFiles !== undefined ||
+        args.maxTotalBytes !== undefined ||
+        args.excludeDirectories.length > 0) {
+        fail("scan resource options are only supported by the scan command");
+    }
     if (args.positionals.length === 0)
         fail("check requires at least one skill name or hash");
     const feed = await loadFeedOrFail(args.feed, feedOptions);
@@ -294,7 +357,17 @@ else if (args.command === "scan") {
         fail("--version is only supported by the check command");
     const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs();
     const feed = await loadFeedOrFail(args.feed, feedOptions);
-    const result = await scanSkills(dirs, feed, { ecosystem: args.ecosystem });
+    const result = await scanSkills(dirs, feed, {
+        ecosystem: args.ecosystem,
+        concurrency: args.scanConcurrency,
+        hash: {
+            concurrency: args.hashConcurrency,
+            maxFileBytes: args.maxFileBytes,
+            maxFiles: args.maxFiles,
+            maxTotalBytes: args.maxTotalBytes,
+            excludeDirectories: args.excludeDirectories,
+        },
+    });
     if (args.format === "human") {
         for (const d of result.installed) {
             console.log(pc.dim(`scanning ${d.dir} (${d.names.length} skills)`));
@@ -303,7 +376,7 @@ else if (args.command === "scan") {
             console.log(pc.yellow("no skill directories found"));
         }
     }
-    report(result.scannedCount, result.matches, result.warnings, args.format, args.strict, args.failOn);
+    report(result.scannedCount, result.matches, result.warnings, args.format, args.strict, args.failOn, result.stats);
 }
 else {
     fail(`unknown command "${args.command}"`);
