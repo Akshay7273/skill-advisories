@@ -35,6 +35,11 @@
       "enum": ["allow", "review", "block"],
       "default": "review"
     },
+    "unlockedArtifacts": {
+      "description": "What to do about an installed artifact the lockfile does not approve, or whose contents no longer match it.",
+      "enum": ["allow", "review", "block"],
+      "default": "review"
+    },
     "maxFeedAgeHours": {
       "description": "Reject the advisory feed once it is older than this many hours.",
       "type": "integer",
