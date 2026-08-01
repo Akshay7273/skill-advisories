@@ -1,0 +1,16 @@
+{
+  "schema_version": "1",
+  "generated": "2026-08-01T02:03:55.565Z",
+  "artifacts": [
+    {
+      "name": "skill-advisories-check",
+      "sha256": "a8291cc1d24c01a280dda4405eb1035e06f12dc769c6b0b303dcf0f1c5ad8ce6",
+      "files": 2
+    },
+    {
+      "name": "vscode",
+      "sha256": "d9d17f44c857134fbb5acfea38174254cc295e1738724f3fed339586019af2d6",
+      "files": 1
+    }
+  ]
+}
