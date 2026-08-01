@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
-import { hashSkillDir, hashSkillDirDetailed, sha256File } from "../src/hash.js"
+import { hashSkillDir, hashSkillDirDetailed, artifactDigest, sha256File } from "../src/hash.js"
 import { matchHashes } from "../src/lookup.js"
 
 const digest = (s: string) => createHash("sha256").update(s).digest("hex")
@@ -81,6 +81,36 @@ describe("hashSkillDir", () => {
 			expect(hashed.map((h) => h.file)).toEqual(["SKILL.md"])
 		},
 	)
+})
+
+describe("artifactDigest", () => {
+	it("is independent of the order files were hashed in", () => {
+		const files = [
+			{ file: "SKILL.md", sha256: digest("a") },
+			{ file: "scripts/run.sh", sha256: digest("b") },
+		]
+		expect(artifactDigest(files)).toBe(artifactDigest([...files].reverse()))
+	})
+	it("treats Windows and POSIX separators as the same artifact", () => {
+		const posix = [{ file: "scripts/run.sh", sha256: digest("b") }]
+		const windows = [{ file: "scripts\\run.sh", sha256: digest("b") }]
+		expect(artifactDigest(windows)).toBe(artifactDigest(posix))
+	})
+	it("changes when a file's contents change", () => {
+		const before = [{ file: "SKILL.md", sha256: digest("a") }]
+		const after = [{ file: "SKILL.md", sha256: digest("b") }]
+		expect(artifactDigest(after)).not.toBe(artifactDigest(before))
+	})
+	it("changes when a file is added under the same contents", () => {
+		const one = [{ file: "SKILL.md", sha256: digest("a") }]
+		const two = [...one, { file: "extra.js", sha256: digest("a") }]
+		expect(artifactDigest(two)).not.toBe(artifactDigest(one))
+	})
+	it("distinguishes identical contents at different paths", () => {
+		const here = [{ file: "a.js", sha256: digest("x") }]
+		const there = [{ file: "b.js", sha256: digest("x") }]
+		expect(artifactDigest(here)).not.toBe(artifactDigest(there))
+	})
 })
 
 describe("matchHashes", () => {

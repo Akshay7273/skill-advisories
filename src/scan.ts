@@ -3,7 +3,7 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { mapConcurrent, positiveInteger } from "./concurrency.js"
 import type { Feed } from "./compile.js"
-import { hashSkillDirDetailed } from "./hash.js"
+import { artifactDigest, hashSkillDirDetailed } from "./hash.js"
 import type { HashOptions, HashStats } from "./hash.js"
 import { detectSkillMetadata, inferEcosystemFromDirectory } from "./metadata.js"
 import type { InstalledSkill } from "./metadata.js"
@@ -75,11 +75,32 @@ export type ScanWarning = {
   distance: number
 }
 
+/**
+ * One artifact as observed on disk, independent of whether any advisory matched
+ * it. `scan` answers "is this known bad"; this is the raw observation a lockfile
+ * needs to answer "is this what was approved", and both come from the same walk.
+ */
+export type ScannedArtifact = {
+  path: string
+  name: string
+  version?: string
+  ecosystem?: Ecosystem
+  /** Digest over every hashed file in the artifact. See `artifactDigest`. */
+  sha256: string
+  files: number
+  /**
+   * True when budgets stopped the hash short. The digest then covers only part
+   * of the artifact, so it identifies a subset rather than the whole thing.
+   */
+  incomplete: boolean
+}
+
 export type ScanResult = {
   installed: Array<{ dir: string; names: string[]; skills: InstalledSkill[] }>
   scannedCount: number
   matches: ScanMatch[]
   warnings: ScanWarning[]
+  artifacts: ScannedArtifact[]
   stats: ScanStats
 }
 
@@ -185,11 +206,21 @@ export async function scanSkills(
           })
         }
       }
-      return { matches, warnings, hashStats: hashResult.stats }
+      const artifact: ScannedArtifact = {
+        path: skillPath,
+        name,
+        version,
+        ecosystem,
+        sha256: artifactDigest(hashedFiles),
+        files: hashedFiles.length,
+        incomplete: hashResult.stats.budgetExhausted,
+      }
+      return { matches, warnings, artifact, hashStats: hashResult.stats }
   })
 
   const matches = artifactResults.flatMap((result) => result.matches)
   const warnings = artifactResults.flatMap((result) => result.warnings)
+  const artifacts = artifactResults.map((result) => result.artifact)
   const stats: ScanStats = {
     discoveredFiles: 0,
     hashedFiles: 0,
@@ -218,5 +249,5 @@ export async function scanSkills(
     }
   }
 
-  return { installed, scannedCount: skills.length, matches, warnings, stats }
+  return { installed, scannedCount: skills.length, matches, warnings, artifacts, stats }
 }
