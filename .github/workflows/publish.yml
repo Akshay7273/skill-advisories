@@ -82,3 +82,25 @@ jobs:
           args=(--verify-tag --generate-notes --title "skill-advisories $RELEASE_TAG")
           if [[ "$RELEASE_TAG" == *-* ]]; then args+=(--prerelease); fi
           gh release create "$RELEASE_TAG" "${args[@]}"
+      - name: Move the action pointer tag to this release
+        if: ${{ !contains(inputs.tag, '-') }}
+        shell: bash
+        env:
+          POINTER_TAG: v1
+        run: |
+          # Consumers write `uses: Akshay7273/skill-advisories@v1`, so the
+          # pointer has to be moved or they stay on whatever release last
+          # moved it. It drifted three releases behind before this step
+          # existed.
+          #
+          # The pointer is deliberately not derived from the release tag. It
+          # names the action's input contract in action.yml, which has been
+          # stable since v1 and is versioned separately from the package --
+          # deriving it while the package sits at 0.x would compute "v0" and
+          # leave the tag consumers actually reference untouched.
+          #
+          # HEAD is the release commit: the checkout above pinned this job to
+          # the release tag, and it is used rather than resolving the tag again
+          # because that checkout is shallow.
+          git tag -f "$POINTER_TAG" HEAD
+          git push --force origin "refs/tags/$POINTER_TAG"
