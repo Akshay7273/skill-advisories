@@ -70,6 +70,75 @@ describe("artifact lock", () => {
     expect(changed.generated).toBe("2026-09-01T00:00:00.000Z")
   })
 
+  it("keeps generated stable when the previous file orders its keys differently", () => {
+    // Key order is not something a caller controls, and nothing about it says
+    // the approved set changed. A hand-written or externally generated file is
+    // free to use the order the published schema declares.
+    const previous = parseArtifactLock({
+      schema_version: "1",
+      generated: NOW,
+      artifacts: [
+        {
+          name: "alpha",
+          ecosystem: "claude-skill",
+          version: "1.2.0",
+          sha256: digest("a"),
+          files: 3,
+        },
+      ],
+    })
+    const again = buildLock(
+      [observed("alpha", digest("a"), { version: "1.2.0" })],
+      "2026-09-01T00:00:00.000Z",
+      previous,
+    )
+    expect(again.generated).toBe(NOW)
+  })
+
+  it("compares every locked field, so any one of them changing moves generated", () => {
+    // Guards the comparison against a field being added to the entry and
+    // silently left out of it, which would approve a change without recording
+    // that anything happened.
+    const base = observed("alpha", digest("a"), { version: "1.2.0" })
+    const first = buildLock([base], NOW)
+    const LATER = "2026-09-01T00:00:00.000Z"
+    const variants: Array<Partial<ScannedArtifact>> = [
+      { name: "beta" },
+      { ecosystem: "npm" },
+      { version: "2.0.0" },
+      { sha256: digest("b") },
+      { files: 4 },
+    ]
+    for (const variant of variants) {
+      const rebuilt = buildLock([{ ...base, ...variant }], LATER, first)
+      expect(rebuilt.generated, `${Object.keys(variant)[0]} did not move generated`).toBe(LATER)
+    }
+  })
+
+  it("preserves a $schema reference the previous lockfile carried", () => {
+    // The published schema permits $schema, so a repository is entitled to
+    // point its editor at it. Dropping the line on the next write would take
+    // that validation away without saying so.
+    const url =
+      "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/schema/lock.schema.json"
+    const previous = parseArtifactLock({
+      $schema: url,
+      schema_version: "1",
+      generated: NOW,
+      artifacts: [{ name: "alpha", sha256: digest("a"), files: 3 }],
+    })
+    const again = buildLock(
+      [observed("alpha", digest("a"), { ecosystem: undefined })],
+      "2026-09-01T00:00:00.000Z",
+      previous,
+    )
+    expect(again.$schema).toBe(url)
+    // Still stable, so preserving the reference did not read as a change.
+    expect(again.generated).toBe(NOW)
+    // Never invented for a file that did not ask for one.
+    expect(buildLock([observed("alpha", digest("a"))], NOW).$schema).toBeUndefined()
+  })
+
   it("locks one entry for the same artifact installed twice", () => {
     const lock = buildLock(
       [

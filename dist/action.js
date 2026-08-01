@@ -4909,14 +4909,26 @@ function lockKey(artifact) {
   return artifact.ecosystem ? `${artifact.ecosystem}:${artifact.name}` : artifact.name;
 }
 function lockedFrom(artifact) {
-  const locked = {
+  return {
     name: artifact.name,
+    ...artifact.ecosystem ? { ecosystem: artifact.ecosystem } : {},
+    ...artifact.version ? { version: artifact.version } : {},
     sha256: artifact.sha256,
     files: artifact.files
   };
-  if (artifact.ecosystem) locked.ecosystem = artifact.ecosystem;
-  if (artifact.version) locked.version = artifact.version;
-  return locked;
+}
+function comparable(artifact) {
+  return JSON.stringify([
+    artifact.name,
+    artifact.ecosystem ?? null,
+    artifact.version ?? null,
+    artifact.sha256,
+    artifact.files
+  ]);
+}
+function sameApprovals(left, right) {
+  if (left.length !== right.length) return false;
+  return left.every((artifact, index) => comparable(artifact) === comparable(right[index]));
 }
 function buildLock(artifacts, generated, previous) {
   const incomplete = artifacts.filter((artifact) => artifact.incomplete);
@@ -4943,8 +4955,9 @@ function buildLock(artifacts, generated, previous) {
   const locked = [...byKey.values()].sort(
     (left, right) => lockKey(left).localeCompare(lockKey(right))
   );
-  const unchanged = previous !== void 0 && JSON.stringify(previous.artifacts) === JSON.stringify(locked);
+  const unchanged = previous !== void 0 && sameApprovals(previous.artifacts, locked);
   return {
+    ...previous?.$schema ? { $schema: previous.$schema } : {},
     schema_version: "1",
     generated: unchanged ? previous.generated : generated,
     artifacts: locked

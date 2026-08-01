@@ -56,7 +56,19 @@ someone, rather than as one artifact vanishing and an unrelated one appearing.
 
 **`generated` is stable across re-runs.** It moves only when the approved set
 actually changes, so re-locking an unchanged tree produces byte-identical
-output and CI can diff it.
+output and CI can diff it. Two files approving the same artifacts are the same
+approval whatever order their keys sit in: the comparison reads field values
+rather than serialised bytes, so a lockfile written by hand or by another tool
+does not read as a change.
+
+Fields are written in the order the schema declares them — `name`,
+`ecosystem`, `version`, `sha256`, `files` — so a file produced by anything
+implementing that schema is left alone rather than reordered on first contact.
+
+An optional `$schema` reference is preserved across rewrites. Adding one points
+an editor at the published schema and gets the file validated as it is edited;
+`lock` never adds one on its own, because what a committed file references is
+the repository's decision.
 
 ## Recording approvals
 

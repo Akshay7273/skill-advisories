@@ -166,6 +166,76 @@ try {
   assert.equal(rewritten.status, 0, rewritten.stderr)
   assert.equal(JSON.parse(rewritten.stdout).written, false)
 
+  // The same guarantee has to survive an entry carrying an ecosystem and a
+  // version, and a file whose keys are ordered the way the published schema
+  // declares them rather than the way the writer happens to emit them. Both
+  // reach buildLock through the lockfile parser, and comparing serialised
+  // bytes read either as a changed approval set. This runs against its own
+  // tree so the drift checks below still see the one they built.
+  const versionedRoot = path.join(scanRoot, "versioned-skills")
+  mkdirSync(path.join(versionedRoot, "versioned-alpha"), { recursive: true })
+  writeFileSync(
+    path.join(versionedRoot, "versioned-alpha", "SKILL.md"),
+    "---\nname: versioned-alpha\nversion: 1.2.0\n---\n\n# versioned-alpha\n",
+  )
+  const versionedLockfile = path.join(scanRoot, "versioned-lock.json")
+  const seeded = run([
+    "lock",
+    versionedRoot,
+    "--lockfile",
+    versionedLockfile,
+    "--ecosystem",
+    "npm",
+    "--format",
+    "json",
+  ])
+  assert.equal(seeded.status, 0, seeded.stderr)
+  const seededLock = JSON.parse(readFileSync(versionedLockfile, "utf8"))
+  assert.equal(seededLock.artifacts[0].ecosystem, "npm")
+  assert.equal(seededLock.artifacts[0].version, "1.2.0")
+
+  // Rewrite the file with its keys in the published schema's declared order,
+  // plus the $schema reference the schema permits. Same approvals.
+  writeFileSync(
+    versionedLockfile,
+    `${JSON.stringify(
+      {
+        $schema:
+          "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/schema/lock.schema.json",
+        schema_version: "1",
+        generated: seededLock.generated,
+        artifacts: seededLock.artifacts.map((artifact) => ({
+          name: artifact.name,
+          ecosystem: artifact.ecosystem,
+          version: artifact.version,
+          sha256: artifact.sha256,
+          files: artifact.files,
+        })),
+      },
+      null,
+      2,
+    )}\n`,
+  )
+  const reordered = run([
+    "lock",
+    versionedRoot,
+    "--lockfile",
+    versionedLockfile,
+    "--ecosystem",
+    "npm",
+    "--format",
+    "json",
+  ])
+  assert.equal(reordered.status, 0, reordered.stderr)
+  const reorderedResult = JSON.parse(reordered.stdout)
+  assert.equal(reorderedResult.written, false, "a key reordering must not rewrite the lockfile")
+  assert.equal(reorderedResult.generated, seededLock.generated)
+  // A $schema reference the file carried is the repository's, not ours to drop.
+  assert.ok(
+    JSON.parse(readFileSync(versionedLockfile, "utf8")).$schema,
+    "lock must preserve a $schema reference",
+  )
+
   const clean = run(["lock", "--check", lockRoot, "--lockfile", lockfile, "--format", "json"])
   assert.equal(clean.status, 0, clean.stderr)
   const cleanResult = JSON.parse(clean.stdout)
