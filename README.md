@@ -81,6 +81,9 @@ npx @akshay7273/skill-advisories lock ./skills
 
 # Fail CI when what is installed is not what was approved
 npx @akshay7273/skill-advisories lock --check ./skills --strict
+
+# Report the newest feed copy the published history proves good
+npx @akshay7273/skill-advisories rollback ./mirror-a ./mirror-b
 ```
 
 Common options: `--format <human|json|sarif>`, `--fail-on <severity>`,
@@ -105,6 +108,13 @@ this the artifact that was reviewed*. It records approved artifact digests in a
 committed lockfile and compares installed artifacts against them without
 consulting the feed at all. See
 [approved artifact identities](docs/lockfile.md).
+
+`rollback` answers the question `verify` cannot. A feed directory assembled by
+an attacker matches its own evidence perfectly, so during an incident the useful
+question is which of the copies you hold the *published history* proves good.
+It examines every candidate against a history supplied separately, reports the
+newest one the evidence justifies, and writes nothing. See
+[verified recovery points](docs/rollback-verification.md).
 
 Automation consumers can rely on the [versioned JSON result contract](docs/result-schema.md).
 

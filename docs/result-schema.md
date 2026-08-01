@@ -85,5 +85,18 @@ scan telemetry under a `stats` key rather than a `scan` one, because a lock run
 is only ever a filesystem walk. It is described in
 [approved artifact identities](lockfile.md#json-output).
 
+The `rollback` subcommand reports on copies of a feed: `0` a recovery point was
+selected, `1` no candidate is provably good, `2` the history it judges against
+could not be read. Its JSON reuses `schemaVersion` and reports `history`,
+`published`, a `candidates` array ordered newest published state first, an
+optional `selected` naming the copy the evidence justifies, and `problems`
+holding faults in the log itself. A `selected` is absent whenever `problems` is
+non-empty, because a rewritten log cannot vouch for anything in it. Each
+candidate carries `dir` and its own `problems`; `cursor`, `digest`,
+`advisoryCount`, `position`, and `generated` are present only as far as the copy
+could be read and located in the log. Note that `generated` is the timestamp the
+log records for that state, not the one the copy claims. See
+[last-known-good feed recovery](operations/rollback.md#selecting-a-recovery-point).
+
 JSON is written to stdout. Diagnostics, cache warnings, and human-readable
 errors are written to stderr.
