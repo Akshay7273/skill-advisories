@@ -39,7 +39,9 @@ commit it. The policy can:
 - block advisories at or above a severity threshold;
 - deny entire artifact ecosystems;
 - require a SHA-256 identity;
-- allow, review, or block typosquat warnings; and
+- allow, review, or block typosquat warnings;
+- allow, review, or block artifacts no lockfile approved, via
+  `unlockedArtifacts` (see [approved artifact identities](lockfile.md)); and
 - set `maxFeedAgeHours`, the age at which the repository stops treating the
   feed as current (default 48).
 

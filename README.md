@@ -75,6 +75,12 @@ npx @akshay7273/skill-advisories scan --max-feed-age 12 --strict
 
 # Check a downloaded feed directory against its own evidence
 npx @akshay7273/skill-advisories verify ./feed
+
+# Record the artifacts installed here as the approved set
+npx @akshay7273/skill-advisories lock ./skills
+
+# Fail CI when what is installed is not what was approved
+npx @akshay7273/skill-advisories lock --check ./skills --strict
 ```
 
 Common options: `--format <human|json|sarif>`, `--fail-on <severity>`,
@@ -93,6 +99,12 @@ feed, incomplete-scan, or stale-feed-under-`--strict` error. The `verify`
 subcommand reports on a directory instead of on artifacts and uses its own
 codes, described in
 [feed freshness and verification](docs/feed-freshness.md).
+
+`lock` answers the question a feed cannot: not *is this known bad*, but *is
+this the artifact that was reviewed*. It records approved artifact digests in a
+committed lockfile and compares installed artifacts against them without
+consulting the feed at all. See
+[approved artifact identities](docs/lockfile.md).
 
 Automation consumers can rely on the [versioned JSON result contract](docs/result-schema.md).
 

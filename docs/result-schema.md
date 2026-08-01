@@ -77,5 +77,13 @@ its codes carry a different meaning: `0` the directory matches its own evidence,
 under the same `schemaVersion`, described in
 [feed freshness](feed-freshness.md#verification).
 
+The `lock` subcommand reports on the disk rather than on the feed and likewise
+carries its own codes: for `lock --check`, `0` the installed artifacts match the
+lockfile or drift the policy tolerates, `1` drift the policy rejects, `2` the
+check could not run. Its JSON shape reuses `schemaVersion`, and reports the same
+scan telemetry under a `stats` key rather than a `scan` one, because a lock run
+is only ever a filesystem walk. It is described in
+[approved artifact identities](lockfile.md#json-output).
+
 JSON is written to stdout. Diagnostics, cache warnings, and human-readable
 errors are written to stderr.

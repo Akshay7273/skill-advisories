@@ -4,5 +4,6 @@
   "failOn": "high",
   "deniedEcosystems": [],
   "requireHash": false,
-  "warnings": "review"
+  "warnings": "review",
+  "unlockedArtifacts": "review"
 }
