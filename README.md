@@ -31,11 +31,14 @@ Consume the database directly — no install needed:
 - Advisory schema: [`schema/advisory.schema.json`](schema/advisory.schema.json)
 - OSV-compatible index: [`feed/osv/index.json`](feed/osv/index.json)
 - Multi-file checksum manifest: [`feed/checksums.txt`](feed/checksums.txt)
+- Append-only publication history: [`feed/history.json`](feed/history.json)
 
 See the [OSV export and verification guide](docs/osv-export.md) for field mapping and integrity checks.
 Incremental consumers should follow the [compact feed and delta protocol](docs/feed-updates.md).
 References may carry archival [evidence provenance](docs/evidence-provenance.md), and
 every cited page is probed weekly for [link rot](docs/evidence-provenance.md#detecting-rot).
+A downloaded copy can be checked against its own evidence with
+[`skill-advisories verify`](docs/feed-freshness.md#verification).
 
 ## CLI
 
@@ -66,11 +69,18 @@ npx @akshay7273/skill-advisories scan --offline
 
 # Set minimum failure threshold (low, medium, high, critical)
 npx @akshay7273/skill-advisories scan ./skills --fail-on high
+
+# Refuse to act on a feed older than 12 hours
+npx @akshay7273/skill-advisories scan --max-feed-age 12 --strict
+
+# Check a downloaded feed directory against its own evidence
+npx @akshay7273/skill-advisories verify ./feed
 ```
 
 Common options: `--format <human|json|sarif>`, `--fail-on <severity>`,
 `--ecosystem <id>`, `--version <value>`, `--sha256`, `--strict`,
-`--offline`, `--refresh`, and `--feed <url-or-path>`.
+`--offline`, `--refresh`, `--max-feed-age <hours>`, and
+`--feed <url-or-path>`.
 
 Filesystem scans also support bounded execution with `--concurrency`,
 `--hash-concurrency`, `--max-file-bytes`, `--max-files`,
@@ -79,7 +89,10 @@ fails closed with exit code 2; `--allow-incomplete` explicitly permits a partial
 result. See the [JSON result contract](docs/result-schema.md) for scan telemetry.
 
 Exit codes: `0` no advisories matched · `1` findings met policy · `2` usage,
-feed, or incomplete-scan error.
+feed, incomplete-scan, or stale-feed-under-`--strict` error. The `verify`
+subcommand reports on a directory instead of on artifacts and uses its own
+codes, described in
+[feed freshness and verification](docs/feed-freshness.md).
 
 Automation consumers can rely on the [versioned JSON result contract](docs/result-schema.md).
 

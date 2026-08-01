@@ -9,8 +9,8 @@ tooling.
 
 - `feed/osv/index.json` lists every exported advisory and relative path.
 - `feed/osv/SKA-YYYY-NNNN.json` contains one OSV record.
-- `feed/checksums.txt` contains SHA-256 hashes for the native feed, indexes, and
-  every OSV record.
+- `feed/checksums.txt` contains SHA-256 hashes for the native feed, indexes, the
+  publication history, and every OSV record.
 
 ## Field mapping
 
@@ -43,3 +43,8 @@ omitted entirely when no reference in the advisory carries provenance.
 After downloading files, calculate SHA-256 for each path and compare it with
 `feed/checksums.txt`. Release automation additionally creates Sigstore-backed
 GitHub artifact attestations for the checksum manifest and npm package.
+
+`skill-advisories verify <dir>` performs the whole comparison in one step and
+additionally checks the download against `feed/history.json`, the append-only
+log of every state this project has published — see
+[feed freshness and verification](feed-freshness.md#verification).
