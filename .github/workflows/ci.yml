@@ -35,6 +35,10 @@ jobs:
       - run: npm run health:check
       - run: npm run ops:check
       - run: npm run integrations:check
+      - name: Shipped integrations match their approved contents
+        run: npm run lock:check
+      - name: Published feed is a usable recovery point
+        run: npm run rollback:check
       - name: Feed is in sync with advisories
         run: |
           npm run compile

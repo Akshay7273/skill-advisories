@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-01
+
+### Added
+- `schema/lock.schema.json` and an artifact lockfile recording the identities and SHA-256 digests a repository has approved
+- `lock` subcommand writing a lockfile from a scan, and `lock --check` comparing an installed tree against one
+- `unlockedArtifacts` policy key allowing, reviewing, or blocking artifacts no lockfile approved
+- Per-artifact digests on `scan` results, and observation of installed artifacts without consulting the feed
+- `rollback` subcommand reporting the newest feed copy a separately supplied publication history proves good
+- `lock` status on MCP `check_artifact` results, with `--lockfile` on the server and a fourth `createAdvisoryMcpServer` parameter
+- CI checks that the shipped integrations match their approved contents and that the published feed is a usable recovery point
+- Approved artifact identity, verified recovery point, and updated recovery runbook guides
+
+### Changed
+- `evaluatePolicy` weighs an optional lock status, reported ahead of a typosquat warning and behind a disclosed advisory
+- A locked artifact name supplied without a digest reports `unverified` rather than `approved`
+
 ## [0.7.0] - 2026-08-01
 
 ### Added

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/schema/lock.schema.json",
+  "title": "skill-advisories artifact lock",
+  "description": "Approved agent artifact identities for one repository. Install paths are deliberately absent: a lockfile is shared, and paths differ on every machine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated", "artifacts"],
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "schema_version": { "const": "1" },
+    "generated": {
+      "description": "When the approved set last changed. Stable across re-runs that approve the same artifacts.",
+      "type": "string",
+      "minLength": 1
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sha256", "files"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "ecosystem": {
+            "enum": [
+              "claude-skill",
+              "claude-plugin",
+              "clawhub",
+              "mcp-server",
+              "npm",
+              "pypi",
+              "vscode-extension",
+              "github-action"
+            ]
+          },
+          "version": { "type": "string", "minLength": 1 },
+          "sha256": {
+            "description": "Digest over the sorted (path, file digest) pairs of the whole artifact.",
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "files": {
+            "description": "How many files that digest covers. Informational; the digest is the identity.",
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

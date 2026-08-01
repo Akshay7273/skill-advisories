@@ -3,6 +3,8 @@ import * as z from "zod/v4"
 import type { Feed } from "./compile.js"
 import { evaluateFreshness } from "./freshness.js"
 import { assessArtifact, searchAdvisories } from "./intelligence.js"
+import { lockStatus } from "./lock.js"
+import type { ArtifactLock } from "./lock.js"
 import { evaluatePolicy } from "./policy.js"
 import type { AdvisoryPolicy } from "./policy.js"
 import { ECOSYSTEMS } from "./types.js"
@@ -25,6 +27,7 @@ export function createAdvisoryMcpServer(
   feed: Feed,
   version: string,
   policy?: AdvisoryPolicy,
+  lock?: ArtifactLock,
 ): McpServer {
   const server = new McpServer({ name: "skill-advisories", version })
 
@@ -48,10 +51,16 @@ export function createAdvisoryMcpServer(
       // same feed out for hours, and an agent reading "no-known-advisory"
       // deserves to know how old the evidence behind that answer is.
       const feedAge = evaluateFreshness(feed, { maxAgeHours: policy?.maxFeedAgeHours })
+      // The feed answers "is this known bad", which is silent for anything not
+      // yet disclosed. The lockfile answers "is this what was reviewed", which
+      // is exactly the gap, so an agent deciding whether to install something
+      // gets both or neither.
+      const status = lock ? lockStatus(lock, query) : undefined
       return toolResult({
         ...assessment,
         feedAge,
-        ...(policy ? { policyDecision: evaluatePolicy(assessment, policy) } : {}),
+        ...(status ? { lock: status } : {}),
+        ...(policy ? { policyDecision: evaluatePolicy(assessment, policy, status) } : {}),
       })
     },
   )

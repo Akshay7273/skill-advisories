@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { Feed } from "../src/compile.js"
 import { buildFeed } from "../src/compile.js"
 import { loadAdvisories } from "../src/load.js"
+import { buildLock } from "../src/lock.js"
+import type { ArtifactLock } from "../src/lock.js"
 import { createAdvisoryMcpServer } from "../src/mcp.js"
 import { parsePolicy } from "../src/policy.js"
 import type { AdvisoryPolicy } from "../src/policy.js"
@@ -13,8 +15,8 @@ let server: ReturnType<typeof createAdvisoryMcpServer>
 let feed: Feed
 
 /** Connect a throwaway client to a server built over a caller-supplied feed. */
-async function connect(over: Feed, policy?: AdvisoryPolicy) {
-  const extra = createAdvisoryMcpServer(over, "test", policy)
+async function connect(over: Feed, policy?: AdvisoryPolicy, lock?: ArtifactLock) {
+  const extra = createAdvisoryMcpServer(over, "test", policy, lock)
   const extraClient = new Client({ name: "skill-advisories-test", version: "1.0.0" })
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
   await Promise.all([extra.connect(serverTransport), extraClient.connect(clientTransport)])
@@ -107,5 +109,95 @@ describe("MCP server", () => {
     expect(result.content).toEqual([
       expect.objectContaining({ type: "text", text: expect.stringContaining("Input validation error") }),
     ])
+  })
+})
+
+describe("MCP lock status", () => {
+  const digest = (value: string) => value.repeat(64).slice(0, 64)
+  const lock = buildLock(
+    [
+      {
+        path: "/home/agent/.claude/skills/reviewed",
+        name: "reviewed",
+        ecosystem: "claude-skill",
+        sha256: digest("a"),
+        files: 3,
+        incomplete: false,
+      },
+    ],
+    "2026-08-01T00:00:00.000Z",
+  )
+
+  /** Run one check_artifact call against a server holding the lockfile above. */
+  async function check(args: Record<string, unknown>, policy?: AdvisoryPolicy) {
+    const session = await connect(feed, policy, lock)
+    try {
+      const result = await session.client.callTool({ name: "check_artifact", arguments: args })
+      return result.structuredContent as Record<string, unknown>
+    } finally {
+      await session.close()
+    }
+  }
+
+  it("reports nothing about approval when no lockfile was supplied", async () => {
+    const result = await client.callTool({
+      name: "check_artifact",
+      arguments: { name: "reviewed", ecosystem: "claude-skill" },
+    })
+    expect(result.structuredContent).not.toHaveProperty("lock")
+  })
+
+  it("approves an artifact whose digest the lockfile recorded", async () => {
+    const result = await check({
+      name: "reviewed",
+      ecosystem: "claude-skill",
+      sha256: digest("a"),
+    })
+    expect(result.lock).toMatchObject({ key: "claude-skill:reviewed", status: "approved" })
+  })
+
+  it("reports an artifact the lockfile never approved", async () => {
+    const result = await check({ name: "unreviewed", ecosystem: "claude-skill" })
+    expect(result.lock).toMatchObject({ status: "unapproved" })
+  })
+
+  it("does not let a clean feed answer for an unapproved artifact", async () => {
+    // The feed has nothing on this name, so without the lockfile the agent
+    // would read no-known-advisory and install it. That silence is exactly the
+    // window a lockfile exists to cover.
+    const result = await check(
+      { name: "unreviewed", ecosystem: "claude-skill" },
+      parsePolicy({ schemaVersion: "1" }),
+    )
+    expect(result).toMatchObject({
+      status: "no-known-advisory",
+      policyDecision: { decision: "review" },
+    })
+  })
+
+  it("blocks an unapproved artifact when the policy says to", async () => {
+    const result = await check(
+      { name: "unreviewed", ecosystem: "claude-skill" },
+      parsePolicy({ schemaVersion: "1", unlockedArtifacts: "block" }),
+    )
+    expect(result.policyDecision).toMatchObject({ decision: "block" })
+  })
+
+  it("holds back a locked name supplied without a digest", async () => {
+    const result = await check(
+      { name: "reviewed", ecosystem: "claude-skill" },
+      parsePolicy({ schemaVersion: "1", unlockedArtifacts: "block" }),
+    )
+    expect(result.lock).toMatchObject({ status: "unverified" })
+    expect(result.policyDecision).toMatchObject({ decision: "block" })
+  })
+
+  it("leaves the decision alone when the policy allows unapproved artifacts", async () => {
+    const result = await check(
+      { name: "unreviewed", ecosystem: "claude-skill" },
+      parsePolicy({ schemaVersion: "1", unlockedArtifacts: "allow" }),
+    )
+    expect(result.lock).toMatchObject({ status: "unapproved" })
+    expect(result.policyDecision).toMatchObject({ decision: "allow" })
   })
 })

@@ -1,13 +1,19 @@
 #!/usr/bin/env node
+import { readFile, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import pc from "picocolors"
 import type { Feed } from "./compile.js"
 import { describeFreshness, evaluateFreshness } from "./freshness.js"
 import type { Freshness } from "./freshness.js"
+import { LOCK_FILE_NAME, buildLock, diffLock, parseArtifactLock } from "./lock.js"
+import type { ArtifactLock } from "./lock.js"
 import { DEFAULT_FEED_URL, collectKnownNames, loadFeed, matchHashes, matchNames } from "./lookup.js"
+import { evaluateLockDrift, loadPolicy, parsePolicy } from "./policy.js"
+import { selectRecoveryPoint } from "./rollback.js"
+import type { RecoverySelection } from "./rollback.js"
 import { ECOSYSTEMS } from "./types.js"
 import type { Advisory, Ecosystem } from "./types.js"
-import { defaultSkillDirs, scanSkills } from "./scan.js"
+import { defaultSkillDirs, observeArtifacts, scanSkills } from "./scan.js"
 import type { ScanMatch, ScanStats, ScanWarning } from "./scan.js"
 import { findNearMatches } from "./typosquat.js"
 import { buildSarif, meetsThreshold } from "./sarif.js"
@@ -24,6 +30,9 @@ Usage:
   skill-advisories check --sha256 <hash...>  Check SHA-256 file hashes against the advisory feed
   skill-advisories scan [dir...]     Scan installed skill directories (defaults to known locations)
   skill-advisories verify [dir]       Verify a published feed directory against its own checksums and history (default: feed)
+  skill-advisories lock [dir...]      Record the artifacts installed in these directories as approved
+  skill-advisories lock --check       Compare installed artifacts against the lockfile without writing
+  skill-advisories rollback [dir...]  Report the newest feed copy the published history proves good (default: feed)
 
 Options:
   --format <format> Output format: human, json, or sarif (default: human)
@@ -45,11 +54,17 @@ Options:
   --allow-incomplete Continue when files exceed budgets or cannot be read
   --max-feed-age <hours> Warn when the feed is older than this (default: 48);
                    exit code 2 instead of a warning under --strict
+  --check          For lock: report drift against the lockfile without writing it
+  --lockfile <path> Path to the artifact lockfile (default: skill-advisories.lock.json)
+  --policy <path>  Policy file deciding whether lock drift fails (default: built-in defaults)
+  --history <path> Published feed history a rollback candidate is judged against (default: feed/history.json)
   --help, -h       Show this help
   --version, -v    Show version
 
 Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage, feed, or incomplete-evidence error
-For verify: 0 = the directory matches its own evidence, 1 = it does not, 2 = the check could not run`
+For verify: 0 = the directory matches its own evidence, 1 = it does not, 2 = the check could not run
+For lock --check: 0 = installed artifacts match the lockfile, 1 = drift the policy rejects, 2 = the check could not run
+For rollback: 0 = a recovery point was selected, 1 = no candidate is provably good, 2 = the selection could not run`
 
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`))
@@ -76,6 +91,10 @@ type ParsedArgs = {
   excludeDirectories: string[]
   allowIncomplete: boolean
   maxFeedAgeHours?: number
+  check: boolean
+  lockfile?: string
+  policy?: string
+  history?: string
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -97,6 +116,10 @@ function parseArgs(argv: string[]): ParsedArgs {
   const excludeDirectories: string[] = []
   let allowIncomplete = false
   let maxFeedAgeHours: number | undefined
+  let check = false
+  let lockfile: string | undefined
+  let policy: string | undefined
+  let history: string | undefined
 
   const VALID_FORMATS = ["human", "json", "sarif"]
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"]
@@ -175,6 +198,23 @@ function parseArgs(argv: string[]): ParsedArgs {
       allowIncomplete = true
     } else if (arg === "--max-feed-age") {
       maxFeedAgeHours = readInteger(arg)
+    } else if (arg === "--check") {
+      check = true
+    } else if (arg === "--lockfile") {
+      i++
+      const value = argv[i]
+      if (!value || value.trim() === "") fail("--lockfile requires a path")
+      lockfile = value
+    } else if (arg === "--policy") {
+      i++
+      const value = argv[i]
+      if (!value || value.trim() === "") fail("--policy requires a path")
+      policy = value
+    } else if (arg === "--history") {
+      i++
+      const value = argv[i]
+      if (!value || value.trim() === "") fail("--history requires a path")
+      history = value
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP)
       process.exit(0)
@@ -213,6 +253,10 @@ function parseArgs(argv: string[]): ParsedArgs {
     excludeDirectories,
     allowIncomplete,
     maxFeedAgeHours,
+    check,
+    lockfile,
+    policy,
+    history,
   }
 }
 
@@ -563,6 +607,223 @@ if (args.command === "check") {
 
   const feedNotCurrent = result.freshness.status !== "fresh"
   process.exitCode = feedNotCurrent && args.strict ? 2 : result.problems.length > 0 ? 1 : 0
+} else if (args.command === "lock") {
+  if (args.sha256) fail("--sha256 is only supported by the check command")
+  if (args.version) fail("--version is only supported by the check command")
+  if (args.failOn) fail("--fail-on decides about advisories, and lock reads no feed")
+  if (args.maxFeedAgeHours !== undefined) fail("--max-feed-age is not meaningful without a feed")
+  // A lockfile answers a question about the disk alone, so nothing here needs
+  // the network and the flags that decide where a feed comes from have nothing
+  // to act on.
+  if (args.offline || args.refresh) fail("lock reads local directories and never fetches a feed")
+  if (args.format === "sarif") {
+    fail("lock reports on approved identities, not on findings, so it has no SARIF form")
+  }
+  // An artifact whose hash stopped short cannot be approved and cannot be
+  // compared, so a flag that waves budget exhaustion through would either
+  // record a digest covering part of a directory or hide drift behind it.
+  if (args.allowIncomplete) fail("lock cannot approve or compare a partially hashed artifact")
+
+  const lockfile = args.lockfile ?? LOCK_FILE_NAME
+  const policy = args.policy
+    ? await loadPolicy(args.policy).catch((error: unknown) =>
+        fail(error instanceof Error ? error.message : String(error)),
+      )
+    : parsePolicy({ schemaVersion: "1" })
+
+  const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs()
+  const observation = await observeArtifacts(dirs, {
+    ecosystem: args.ecosystem,
+    concurrency: args.scanConcurrency,
+    hash: {
+      concurrency: args.hashConcurrency,
+      maxFileBytes: args.maxFileBytes,
+      maxFiles: args.maxFiles,
+      maxTotalBytes: args.maxTotalBytes,
+      excludeDirectories: args.excludeDirectories,
+    },
+  })
+
+  if (args.format === "human") {
+    for (const d of observation.installed) {
+      console.log(pc.dim(`reading ${d.dir} (${d.names.length} skills)`))
+    }
+    if (observation.installed.length === 0) {
+      console.log(pc.yellow("no skill directories found"))
+    }
+  }
+
+  const existing = await readFile(lockfile, "utf8").catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") return undefined
+    return fail(`cannot read ${lockfile}: ${error.message}`)
+  })
+  let previous: ArtifactLock | undefined
+  if (existing !== undefined) {
+    try {
+      previous = parseArtifactLock(JSON.parse(existing))
+    } catch (error) {
+      fail(`invalid lockfile ${lockfile}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  if (args.check) {
+    // Without a lockfile there is nothing to compare against. That is a check
+    // that could not run rather than a check that found drift, so it exits 2.
+    if (!previous) fail(`cannot check against ${lockfile}: the lockfile does not exist`)
+    const drift = diffLock(previous, observation.artifacts)
+    const decision = evaluateLockDrift(drift, policy)
+    // review reports drift without failing, which is what lets a repository
+    // adopt a lockfile before it is ready to enforce one. --strict is the
+    // existing way a caller says it wants the softer signal to count.
+    const rejected = decision.decision === "block" || (decision.decision === "review" && args.strict)
+
+    if (args.format === "json") {
+      console.log(
+        JSON.stringify(
+          {
+            schemaVersion: "1",
+            lockfile,
+            decision: decision.decision,
+            reasons: decision.reasons,
+            drift,
+            stats: observation.stats,
+          },
+          null,
+          2,
+        ),
+      )
+    } else if (decision.reasons.length === 0) {
+      console.log(
+        pc.green(
+          `\u2705 ${lockfile} matches the artifacts installed \u2014 ${drift.matched.length} approved`,
+        ),
+      )
+      if (drift.missing.length > 0) {
+        console.log(pc.dim(`   ${drift.missing.length} approved artifact(s) are not installed`))
+      }
+    } else {
+      const colour = rejected ? pc.red : pc.yellow
+      const mark = rejected ? "\u274c" : "\u26a0"
+      console.log(colour(`${mark} ${lockfile} \u2014 ${decision.reasons.length} problem(s):`))
+      for (const reason of decision.reasons) {
+        console.log(`  ${reason}`)
+      }
+    }
+
+    process.exitCode = rejected ? 1 : 0
+  } else {
+    let lock: ArtifactLock
+    try {
+      lock = buildLock(observation.artifacts, new Date().toISOString(), previous)
+    } catch (error) {
+      // Locking a digest that covers part of a directory, or one of two
+      // artifacts that share an identity, would approve something nobody read.
+      fail(error instanceof Error ? error.message : String(error))
+    }
+
+    const serialised = `${JSON.stringify(lock, null, 2)}\n`
+    // Rewriting identical bytes would dirty a working tree on every run, so a
+    // lock that changes nothing leaves the file alone.
+    const changed = serialised !== existing
+    if (changed) await writeFile(lockfile, serialised, "utf8")
+
+    if (args.format === "json") {
+      console.log(
+        JSON.stringify(
+          {
+            schemaVersion: "1",
+            lockfile,
+            written: changed,
+            generated: lock.generated,
+            artifacts: lock.artifacts.length,
+            stats: observation.stats,
+          },
+          null,
+          2,
+        ),
+      )
+    } else if (changed) {
+      console.log(
+        pc.green(`\u2705 wrote ${lockfile} \u2014 ${lock.artifacts.length} artifact(s) approved`),
+      )
+    } else {
+      console.log(
+        pc.dim(`${lockfile} already approves these ${lock.artifacts.length} artifact(s)`),
+      )
+    }
+  }
+} else if (args.command === "rollback") {
+  if (
+    args.scanConcurrency !== undefined ||
+    args.hashConcurrency !== undefined ||
+    args.maxFileBytes !== undefined ||
+    args.maxFiles !== undefined ||
+    args.maxTotalBytes !== undefined ||
+    args.excludeDirectories.length > 0 ||
+    args.allowIncomplete
+  ) {
+    fail("scan resource options are only supported by the scan command")
+  }
+  if (args.sha256) fail("--sha256 is only supported by the check command")
+  if (args.ecosystem) fail("--ecosystem is only supported by the check and scan commands")
+  if (args.version) fail("--version is only supported by the check command")
+  if (args.failOn) fail("--fail-on decides about advisories, and rollback reads no feed")
+  // A recovery point is chosen precisely because the current state is suspect,
+  // so the copy worth landing on is normally an old one. Age is not a fault
+  // here, and a threshold that looked like it applied would mislead.
+  if (args.maxFeedAgeHours !== undefined) {
+    fail("rollback judges copies by the published history, not by their age")
+  }
+  if (args.offline || args.refresh) {
+    fail("rollback reads local directories and never fetches a feed")
+  }
+  if (args.format === "sarif") {
+    fail("rollback reports on feed copies, not on artifacts, so it has no SARIF form")
+  }
+
+  const dirs = args.positionals.length > 0 ? args.positionals : ["feed"]
+  let result: RecoverySelection
+  try {
+    result = await selectRecoveryPoint(args.history ?? "feed/history.json", dirs)
+  } catch (error) {
+    // Without a readable history there is no authority to judge any copy
+    // against, so this is a selection that could not run rather than one that
+    // found nothing.
+    if (error instanceof VerifyUnavailableError) fail(error.message)
+    throw error
+  }
+
+  if (args.format === "json") {
+    console.log(JSON.stringify({ schemaVersion: "1", ...result }, null, 2))
+  } else {
+    for (const problem of result.problems) {
+      console.error(pc.red(`\u274c ${problem}`))
+    }
+    for (const candidate of result.candidates) {
+      if (candidate === result.selected) continue
+      const reason = candidate.problems[0] ?? "not selected"
+      console.log(pc.dim(`   ${candidate.dir} \u2014 ${reason}`))
+    }
+    if (result.selected) {
+      console.log(
+        pc.green(
+          `\u2705 ${result.selected.dir} \u2014 published ${result.selected.generated}, ${result.selected.advisoryCount} advisories`,
+        ),
+      )
+      console.log(pc.dim(`   cursor ${result.selected.cursor}`))
+      console.log(
+        pc.dim("   recover with the procedure in docs/operations/rollback.md; nothing was changed"),
+      )
+    } else {
+      console.log(
+        pc.red(
+          `\u274c no candidate is provably good \u2014 ${result.candidates.length} examined against ${result.history}`,
+        ),
+      )
+    }
+  }
+
+  process.exitCode = result.selected ? 0 : 1
 } else {
   fail(`unknown command "${args.command}"`)
 }

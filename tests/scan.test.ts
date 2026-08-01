@@ -65,6 +65,39 @@ describe("bounded skill scanning", () => {
     })
   })
 
+  it("reports every artifact it walked, matched or not", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "ska-artifacts-"))
+    for (const name of ["alpha", "beta"]) {
+      const installedPath = path.join(root, name)
+      await mkdir(installedPath)
+      await writeFile(path.join(installedPath, "SKILL.md"), `# ${name}`)
+    }
+    const result = await scanSkills([root], { advisories: [] } as any, { concurrency: 2 })
+    expect(result.matches).toEqual([])
+    expect(result.artifacts.map((a) => a.name)).toEqual(["alpha", "beta"])
+    for (const artifact of result.artifacts) {
+      expect(artifact.path).toBe(path.join(root, artifact.name))
+      expect(artifact.sha256).toMatch(/^[0-9a-f]{64}$/)
+      expect(artifact.files).toBe(1)
+      expect(artifact.incomplete).toBe(false)
+    }
+    // Same file count, different contents, so the digests must differ.
+    expect(result.artifacts[0].sha256).not.toBe(result.artifacts[1].sha256)
+  })
+
+  it("flags artifacts whose digest covers only part of the directory", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "ska-partial-"))
+    const installedPath = path.join(root, "big")
+    await mkdir(installedPath)
+    await writeFile(path.join(installedPath, "a.txt"), "1")
+    await writeFile(path.join(installedPath, "b.txt"), "2")
+    const result = await scanSkills([root], { advisories: [] } as any, {
+      hash: { maxFiles: 1 },
+    })
+    expect(result.artifacts).toHaveLength(1)
+    expect(result.artifacts[0]).toMatchObject({ name: "big", files: 1, incomplete: true })
+  })
+
   it("rejects zero scan concurrency", async () => {
     await expect(scanSkills([], { advisories: [] } as any, { concurrency: 0 })).rejects.toThrow(
       "positive integer",

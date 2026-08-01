@@ -3,7 +3,7 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { mapConcurrent, positiveInteger } from "./concurrency.js"
 import type { Feed } from "./compile.js"
-import { hashSkillDirDetailed } from "./hash.js"
+import { artifactDigest, hashSkillDirDetailed } from "./hash.js"
 import type { HashOptions, HashStats } from "./hash.js"
 import { detectSkillMetadata, inferEcosystemFromDirectory } from "./metadata.js"
 import type { InstalledSkill } from "./metadata.js"
@@ -75,11 +75,32 @@ export type ScanWarning = {
   distance: number
 }
 
+/**
+ * One artifact as observed on disk, independent of whether any advisory matched
+ * it. `scan` answers "is this known bad"; this is the raw observation a lockfile
+ * needs to answer "is this what was approved", and both come from the same walk.
+ */
+export type ScannedArtifact = {
+  path: string
+  name: string
+  version?: string
+  ecosystem?: Ecosystem
+  /** Digest over every hashed file in the artifact. See `artifactDigest`. */
+  sha256: string
+  files: number
+  /**
+   * True when budgets stopped the hash short. The digest then covers only part
+   * of the artifact, so it identifies a subset rather than the whole thing.
+   */
+  incomplete: boolean
+}
+
 export type ScanResult = {
   installed: Array<{ dir: string; names: string[]; skills: InstalledSkill[] }>
   scannedCount: number
   matches: ScanMatch[]
   warnings: ScanWarning[]
+  artifacts: ScannedArtifact[]
   stats: ScanStats
 }
 
@@ -185,11 +206,27 @@ export async function scanSkills(
           })
         }
       }
-      return { matches, warnings, hashStats: hashResult.stats }
+      const artifact: ScannedArtifact = {
+        path: skillPath,
+        name,
+        version,
+        ecosystem,
+        sha256: artifactDigest(hashedFiles),
+        files: hashedFiles.length,
+        incomplete: hashResult.stats.budgetExhausted,
+      }
+      return { matches, warnings, artifact, hashStats: hashResult.stats }
   })
 
   const matches = artifactResults.flatMap((result) => result.matches)
   const warnings = artifactResults.flatMap((result) => result.warnings)
+  const artifacts = artifactResults.map((result) => result.artifact)
+  const stats = aggregateHashStats(artifactResults.map((result) => result.hashStats))
+
+  return { installed, scannedCount: skills.length, matches, warnings, artifacts, stats }
+}
+
+function aggregateHashStats(perArtifact: HashStats[]): ScanStats {
   const stats: ScanStats = {
     discoveredFiles: 0,
     hashedFiles: 0,
@@ -202,8 +239,7 @@ export async function scanSkills(
     budgetExhausted: false,
     artifactsWithExhaustedBudgets: 0,
   }
-  for (const result of artifactResults) {
-    const hashStats = result.hashStats
+  for (const hashStats of perArtifact) {
     stats.discoveredFiles += hashStats.discoveredFiles
     stats.hashedFiles += hashStats.hashedFiles
     stats.hashedBytes += hashStats.hashedBytes
@@ -217,6 +253,57 @@ export async function scanSkills(
       stats.artifactsWithExhaustedBudgets++
     }
   }
+  return stats
+}
 
-  return { installed, scannedCount: skills.length, matches, warnings, stats }
+export type ArtifactObservation = {
+  installed: Array<{ dir: string; names: string[]; skills: InstalledSkill[] }>
+  artifacts: ScannedArtifact[]
+  stats: ScanStats
+}
+
+/**
+ * Walk the directories `scanSkills` walks and report what is installed there,
+ * without consulting the advisory feed.
+ *
+ * A lockfile answers a question about the disk alone: is this what the
+ * repository approved? Routing that through `scanSkills` would make approving
+ * local artifacts depend on a feed download succeeding, so an unreachable feed
+ * would stop an operation that never needed the network. The observations are
+ * the same ones `scanSkills` returns, so a caller that wants both answers can
+ * still pay for a single walk by scanning once and reusing `artifacts`.
+ */
+export async function observeArtifacts(
+  dirs: string[],
+  options: ScanOptions = {},
+): Promise<ArtifactObservation> {
+  const concurrency = positiveInteger(
+    options.concurrency ?? DEFAULT_SCAN_CONCURRENCY,
+    "scan concurrency",
+  )
+  const installed = await listInstalledSkills(
+    dirs,
+    options.ecosystem,
+    options.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY,
+  )
+  const skills = installed.flatMap((group) => group.skills)
+  const observed = await mapConcurrent(skills, concurrency, async (skill) => {
+    const hashResult = await hashSkillDirDetailed(skill.path, options.hash)
+    const artifact: ScannedArtifact = {
+      path: skill.path,
+      name: skill.name,
+      version: skill.version,
+      ecosystem: skill.ecosystem,
+      sha256: artifactDigest(hashResult.files),
+      files: hashResult.files.length,
+      incomplete: hashResult.stats.budgetExhausted,
+    }
+    return { artifact, hashStats: hashResult.stats }
+  })
+
+  return {
+    installed,
+    artifacts: observed.map((entry) => entry.artifact),
+    stats: aggregateHashStats(observed.map((entry) => entry.hashStats)),
+  }
 }

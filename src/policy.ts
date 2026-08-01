@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import * as z from "zod/v4"
 import { DEFAULT_MAX_FEED_AGE_HOURS } from "./freshness.js"
 import type { ArtifactAssessment } from "./intelligence.js"
+import type { LockDrift, LockStatus } from "./lock.js"
 import { meetsThreshold } from "./sarif.js"
 import { ECOSYSTEMS } from "./types.js"
 
@@ -13,6 +14,11 @@ export const AdvisoryPolicySchema = z
     deniedEcosystems: z.array(z.enum(ECOSYSTEMS)).default([]),
     requireHash: z.boolean().default(false),
     warnings: z.enum(["allow", "review", "block"]).default("review"),
+    // What to do about an installed artifact the lockfile never approved.
+    // Defaults to review rather than block so a repository can adopt a lockfile
+    // without its next unrelated pull request failing on artifacts that were
+    // already there and were never in question.
+    unlockedArtifacts: z.enum(["allow", "review", "block"]).default("review"),
     // How old the feed may be before this repo stops trusting it. Owned by the
     // policy rather than the caller so the rule travels with the repo instead
     // of living in whichever CI invocation happens to run the check.
@@ -41,9 +47,29 @@ export async function loadPolicy(path: string): Promise<AdvisoryPolicy> {
   }
 }
 
+/**
+ * Turn one artifact's lock status into the reason it should be held back, or
+ * nothing when the lockfile has no objection.
+ *
+ * `changed` and `unapproved` are the same question `evaluateLockDrift` asks of
+ * an installed tree, asked here of a single artifact. `unverified` joins them
+ * because a locked name with no digest to compare has not been shown to be the
+ * approved artifact, and treating "we did not check" as "we checked and it was
+ * fine" is the one reading a lockfile must never permit.
+ */
+function lockReason(lock: LockStatus): string | undefined {
+  if (lock.status === "approved") return undefined
+  if (lock.status === "unapproved") return `${lock.key} is not approved by the lockfile`
+  if (lock.status === "changed") {
+    return `${lock.key} does not match its approved contents (expected ${lock.approved})`
+  }
+  return `${lock.key} is approved by the lockfile, but no digest was supplied to compare against`
+}
+
 export function evaluatePolicy(
   assessment: ArtifactAssessment,
   policy: AdvisoryPolicy,
+  lock?: LockStatus,
 ): PolicyDecision {
   const reasons: string[] = []
   const ecosystem = assessment.query.ecosystem
@@ -60,6 +86,14 @@ export function evaluatePolicy(
   }
   if (reasons.length > 0) return { decision: "block", reasons, policy }
 
+  // Softer signals are reported one at a time, strongest first. A lock
+  // objection outranks a name resemblance because it is a fact about the
+  // bytes in hand rather than an inference about what they might be.
+  const unapproved = lock && policy.unlockedArtifacts !== "allow" ? lockReason(lock) : undefined
+  if (unapproved) {
+    return { decision: policy.unlockedArtifacts, reasons: [unapproved], policy }
+  }
+
   if (assessment.warnings.length > 0 && policy.warnings !== "allow") {
     return {
       decision: policy.warnings,
@@ -68,4 +102,38 @@ export function evaluatePolicy(
     }
   }
   return { decision: "allow", reasons: [], policy }
+}
+
+/**
+ * Turn a lockfile comparison into a decision.
+ *
+ * Three of the four drift categories are treated alike, under one policy key,
+ * because they are one question asked from different angles: is something
+ * installed here that this repository did not approve? An artifact with no
+ * lock entry was never approved; an artifact whose digest moved is no longer
+ * the thing that was approved; and an artifact the scan could not finish
+ * hashing cannot be shown to be either. That last one follows the same
+ * fail-closed rule the scanner already applies to exhausted budgets -- a
+ * resource limit must not read as a clean result.
+ *
+ * Missing artifacts are reported by the caller but never fail. A lockfile
+ * describes what is allowed, not what is required, and the common cause of a
+ * missing entry is a developer machine with a smaller install set than the one
+ * the lock was generated on.
+ */
+export function evaluateLockDrift(drift: LockDrift, policy: AdvisoryPolicy): PolicyDecision {
+  if (policy.unlockedArtifacts === "allow") return { decision: "allow", reasons: [], policy }
+
+  const reasons: string[] = []
+  for (const entry of drift.changed) {
+    reasons.push(`${entry.key} does not match its approved contents (expected ${entry.expected})`)
+  }
+  for (const entry of drift.unlocked) {
+    reasons.push(`${entry.key} is installed but not approved by the lockfile`)
+  }
+  for (const entry of drift.indeterminate) {
+    reasons.push(`${entry.key} could not be compared to the lockfile: ${entry.reason}`)
+  }
+  if (reasons.length === 0) return { decision: "allow", reasons: [], policy }
+  return { decision: policy.unlockedArtifacts, reasons, policy }
 }

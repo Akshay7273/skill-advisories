@@ -57,7 +57,7 @@ Make the feed independently consumable and resistant to tampering.
 - [x] Structured evidence provenance and source archival metadata
 - [x] Keyless Sigstore attestations for feed releases
 - [x] Feed freshness metadata and a documented staleness policy
-- [ ] Last-known-good rollback verified by tooling rather than by hand
+- [x] Last-known-good rollback verified by tooling rather than by hand
 - [x] Automated checks for broken references and duplicate artifacts
 
 **Exit criteria:** consumers can verify feed provenance without trusting the
@@ -70,7 +70,7 @@ Put safety checks directly in the workflows where agents acquire capabilities.
 - [x] Read-only MCP server for advisory search and artifact verification
 - [x] Claude Code hook example for pre-install package checks
 - [x] Declarative policy file for severity, ecosystem, hash, and warning requirements
-- [ ] Lockfile format for approved artifact identities and hashes
+- [x] Lockfile format for approved artifact identities and hashes
 - [x] Reusable API package with no CLI side effects
 - [x] Reference integrations for at least three agent ecosystems
 

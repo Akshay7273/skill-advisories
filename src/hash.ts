@@ -154,6 +154,29 @@ export async function hashSkillDirDetailed(
   return { files, stats }
 }
 
+/**
+ * Reduce a set of hashed files to one digest identifying the directory's
+ * contents.
+ *
+ * Entries are sorted by path and separators normalised to `/` first, so the
+ * result depends only on which files exist and what they contain — not on
+ * readdir order, and not on whether the scan ran on Windows or POSIX. The line
+ * format matches `sha256sum`, the same convention `feed/checksums.txt` uses.
+ *
+ * Callers must not treat this as a complete identity when the producing scan
+ * reported `budgetExhausted`: a digest over a truncated file set names a subset
+ * of the artifact, and comparing it to a full one reports drift that is really
+ * a difference in how much was read.
+ */
+export function artifactDigest(files: HashedFile[]): string {
+  const hash = createHash("sha256")
+  const lines = files
+    .map((file) => ({ path: file.file.replaceAll("\\", "/"), sha256: file.sha256 }))
+    .sort((left, right) => left.path.localeCompare(right.path))
+  for (const line of lines) hash.update(`${line.sha256}  ${line.path}\n`)
+  return hash.digest("hex")
+}
+
 /** Backward-compatible compact hash API. */
 export async function hashSkillDir(
   dir: string,
