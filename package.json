@@ -52,6 +52,7 @@
     "references:check": "npm run build && node scripts/check-references.mjs",
     "integrations:check": "npm run build && node scripts/check-integrations.mjs",
     "lock:check": "npm run build && node dist/cli.js lock --check integrations --lockfile integrations/skill-advisories.lock.json --strict",
+    "rollback:check": "npm run build && node dist/cli.js rollback feed --history feed/history.json",
     "build": "tsc && esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/action.js",
     "smoke": "node scripts/smoke-cli.mjs",
     "benchmark": "npm run build && node scripts/benchmark.mjs",
