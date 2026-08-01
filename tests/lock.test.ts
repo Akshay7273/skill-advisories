@@ -178,6 +178,48 @@ describe("artifact lock", () => {
       parseArtifactLock({ ...lock, artifacts: [{ name: "alpha", sha256: "short", files: 1 }] }),
     ).toThrow()
   })
+
+  it("refuses a lockfile approving one identity twice with different digests", () => {
+    // buildLock never writes this, but a botched merge or another tool can. The
+    // two readers resolved it differently -- diffLock's Map kept the last
+    // entry, lockStatus's find kept the first -- so one file told lock --check
+    // an artifact had drifted while telling an MCP client it was approved.
+    expect(() =>
+      parseArtifactLock({
+        schema_version: "1",
+        generated: NOW,
+        artifacts: [
+          { name: "alpha", sha256: digest("a"), files: 3 },
+          { name: "alpha", sha256: digest("b"), files: 3 },
+        ],
+      }),
+    ).toThrow("does not say which artifact is approved")
+
+    // The same identity repeated with the same digest is redundant rather than
+    // contradictory, and says one thing, so it is accepted.
+    expect(
+      parseArtifactLock({
+        schema_version: "1",
+        generated: NOW,
+        artifacts: [
+          { name: "alpha", sha256: digest("a"), files: 3 },
+          { name: "alpha", sha256: digest("a"), files: 3 },
+        ],
+      }).artifacts,
+    ).toHaveLength(2)
+
+    // One name in two ecosystems is two identities, not a conflict.
+    expect(
+      parseArtifactLock({
+        schema_version: "1",
+        generated: NOW,
+        artifacts: [
+          { name: "alpha", ecosystem: "npm", sha256: digest("a"), files: 3 },
+          { name: "alpha", ecosystem: "pypi", sha256: digest("b"), files: 3 },
+        ],
+      }).artifacts,
+    ).toHaveLength(2)
+  })
 })
 
 describe("lock drift", () => {

@@ -307,6 +307,27 @@ try {
   ])
   assert.equal(noLockfile.status, 2)
 
+  // A lockfile approving one identity twice with two different digests never
+  // said which of them it approves, and the two readers resolved that
+  // differently -- the drift comparison kept the last entry, the lookup behind
+  // MCP kept the first. It is refused at the parser, so this is exit 2 for the
+  // same reason an unreadable lockfile is: a check that could not run.
+  const contradictory = path.join(scanRoot, "contradictory-lock.json")
+  writeFileSync(
+    contradictory,
+    JSON.stringify({
+      schema_version: "1",
+      generated: new Date().toISOString(),
+      artifacts: [
+        { name: "lock-alpha", sha256: "a".repeat(64), files: 1 },
+        { name: "lock-alpha", sha256: "b".repeat(64), files: 1 },
+      ],
+    }),
+  )
+  const conflicted = run(["lock", "--check", lockRoot, "--lockfile", contradictory])
+  assert.equal(conflicted.status, 2, conflicted.stdout)
+  assert.match(conflicted.stderr, /does not say which artifact is approved/)
+
   // lock reads no feed and reports no findings, so the flags that only make
   // sense for those are refused rather than quietly ignored.
   for (const flag of [["--offline"], ["--refresh"], ["--format", "sarif"], ["--allow-incomplete"]]) {
