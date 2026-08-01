@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import * as z from "zod/v4"
 import { DEFAULT_MAX_FEED_AGE_HOURS } from "./freshness.js"
 import type { ArtifactAssessment } from "./intelligence.js"
-import type { LockDrift } from "./lock.js"
+import type { LockDrift, LockStatus } from "./lock.js"
 import { meetsThreshold } from "./sarif.js"
 import { ECOSYSTEMS } from "./types.js"
 
@@ -47,9 +47,29 @@ export async function loadPolicy(path: string): Promise<AdvisoryPolicy> {
   }
 }
 
+/**
+ * Turn one artifact's lock status into the reason it should be held back, or
+ * nothing when the lockfile has no objection.
+ *
+ * `changed` and `unapproved` are the same question `evaluateLockDrift` asks of
+ * an installed tree, asked here of a single artifact. `unverified` joins them
+ * because a locked name with no digest to compare has not been shown to be the
+ * approved artifact, and treating "we did not check" as "we checked and it was
+ * fine" is the one reading a lockfile must never permit.
+ */
+function lockReason(lock: LockStatus): string | undefined {
+  if (lock.status === "approved") return undefined
+  if (lock.status === "unapproved") return `${lock.key} is not approved by the lockfile`
+  if (lock.status === "changed") {
+    return `${lock.key} does not match its approved contents (expected ${lock.approved})`
+  }
+  return `${lock.key} is approved by the lockfile, but no digest was supplied to compare against`
+}
+
 export function evaluatePolicy(
   assessment: ArtifactAssessment,
   policy: AdvisoryPolicy,
+  lock?: LockStatus,
 ): PolicyDecision {
   const reasons: string[] = []
   const ecosystem = assessment.query.ecosystem
@@ -65,6 +85,14 @@ export function evaluatePolicy(
     }
   }
   if (reasons.length > 0) return { decision: "block", reasons, policy }
+
+  // Softer signals are reported one at a time, strongest first. A lock
+  // objection outranks a name resemblance because it is a fact about the
+  // bytes in hand rather than an inference about what they might be.
+  const unapproved = lock && policy.unlockedArtifacts !== "allow" ? lockReason(lock) : undefined
+  if (unapproved) {
+    return { decision: policy.unlockedArtifacts, reasons: [unapproved], policy }
+  }
 
   if (assessment.warnings.length > 0 && policy.warnings !== "allow") {
     return {
