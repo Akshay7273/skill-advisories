@@ -221,6 +221,12 @@ export async function scanSkills(
   const matches = artifactResults.flatMap((result) => result.matches)
   const warnings = artifactResults.flatMap((result) => result.warnings)
   const artifacts = artifactResults.map((result) => result.artifact)
+  const stats = aggregateHashStats(artifactResults.map((result) => result.hashStats))
+
+  return { installed, scannedCount: skills.length, matches, warnings, artifacts, stats }
+}
+
+function aggregateHashStats(perArtifact: HashStats[]): ScanStats {
   const stats: ScanStats = {
     discoveredFiles: 0,
     hashedFiles: 0,
@@ -233,8 +239,7 @@ export async function scanSkills(
     budgetExhausted: false,
     artifactsWithExhaustedBudgets: 0,
   }
-  for (const result of artifactResults) {
-    const hashStats = result.hashStats
+  for (const hashStats of perArtifact) {
     stats.discoveredFiles += hashStats.discoveredFiles
     stats.hashedFiles += hashStats.hashedFiles
     stats.hashedBytes += hashStats.hashedBytes
@@ -248,6 +253,57 @@ export async function scanSkills(
       stats.artifactsWithExhaustedBudgets++
     }
   }
+  return stats
+}
 
-  return { installed, scannedCount: skills.length, matches, warnings, artifacts, stats }
+export type ArtifactObservation = {
+  installed: Array<{ dir: string; names: string[]; skills: InstalledSkill[] }>
+  artifacts: ScannedArtifact[]
+  stats: ScanStats
+}
+
+/**
+ * Walk the directories `scanSkills` walks and report what is installed there,
+ * without consulting the advisory feed.
+ *
+ * A lockfile answers a question about the disk alone: is this what the
+ * repository approved? Routing that through `scanSkills` would make approving
+ * local artifacts depend on a feed download succeeding, so an unreachable feed
+ * would stop an operation that never needed the network. The observations are
+ * the same ones `scanSkills` returns, so a caller that wants both answers can
+ * still pay for a single walk by scanning once and reusing `artifacts`.
+ */
+export async function observeArtifacts(
+  dirs: string[],
+  options: ScanOptions = {},
+): Promise<ArtifactObservation> {
+  const concurrency = positiveInteger(
+    options.concurrency ?? DEFAULT_SCAN_CONCURRENCY,
+    "scan concurrency",
+  )
+  const installed = await listInstalledSkills(
+    dirs,
+    options.ecosystem,
+    options.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY,
+  )
+  const skills = installed.flatMap((group) => group.skills)
+  const observed = await mapConcurrent(skills, concurrency, async (skill) => {
+    const hashResult = await hashSkillDirDetailed(skill.path, options.hash)
+    const artifact: ScannedArtifact = {
+      path: skill.path,
+      name: skill.name,
+      version: skill.version,
+      ecosystem: skill.ecosystem,
+      sha256: artifactDigest(hashResult.files),
+      files: hashResult.files.length,
+      incomplete: hashResult.stats.budgetExhausted,
+    }
+    return { artifact, hashStats: hashResult.stats }
+  })
+
+  return {
+    installed,
+    artifacts: observed.map((entry) => entry.artifact),
+    stats: aggregateHashStats(observed.map((entry) => entry.hashStats)),
+  }
 }
