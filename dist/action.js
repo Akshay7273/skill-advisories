@@ -107,6 +107,7 @@ var require_picocolors = __commonJS({
 
 // src/cli.ts
 var import_picocolors2 = __toESM(require_picocolors(), 1);
+import { readFile as readFile6, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 
 // src/freshness.ts
@@ -135,684 +136,6 @@ function describeFreshness(freshness) {
   }
   const age = `${freshness.ageHours}h old`;
   return freshness.status === "stale" ? `feed is stale: ${age}, limit ${freshness.maxAgeHours}h` : `feed is fresh: ${age}, limit ${freshness.maxAgeHours}h`;
-}
-
-// src/lookup.ts
-var import_picocolors = __toESM(require_picocolors(), 1);
-import { createHash as createHash2 } from "node:crypto";
-import { readFile } from "node:fs/promises";
-
-// src/cache.ts
-import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-var DEFAULT_TTL_MS = 60 * 60 * 1e3;
-function cacheDir() {
-  const base = process.env.XDG_CACHE_HOME && process.env.XDG_CACHE_HOME !== "" ? process.env.XDG_CACHE_HOME : path.join(os.homedir(), ".cache");
-  return path.join(base, "skill-advisories");
-}
-function cacheFileFor(feedUrl) {
-  const key = createHash("sha256").update(feedUrl).digest("hex").slice(0, 16);
-  return path.join(cacheDir(), `feed-${key}.json`);
-}
-async function readCache(feedUrl) {
-  try {
-    const raw = await fs.readFile(cacheFileFor(feedUrl), "utf8");
-    const parsed = JSON.parse(raw);
-    if (typeof parsed.fetchedAt !== "number" || typeof parsed.body !== "string") {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-async function writeCache(feedUrl, body) {
-  try {
-    await fs.mkdir(cacheDir(), { recursive: true });
-    const entry = { fetchedAt: Date.now(), body };
-    await fs.writeFile(cacheFileFor(feedUrl), JSON.stringify(entry));
-  } catch {
-  }
-}
-function isFresh(entry, ttlMs = DEFAULT_TTL_MS) {
-  return Date.now() - entry.fetchedAt < ttlMs;
-}
-
-// src/lookup.ts
-var DEFAULT_FEED_URL = "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json";
-function normalizeVersion(version2) {
-  return version2.trim().replace(/^v(?=\d)/i, "");
-}
-function artifactAffectsVersion(artifact, version2) {
-  if (!version2 || !artifact.versions || artifact.versions.length === 0) return true;
-  if (artifact.versions.includes("*")) return true;
-  const wanted = normalizeVersion(version2);
-  return artifact.versions.some((candidate) => normalizeVersion(candidate) === wanted);
-}
-async function loadFeed(source = DEFAULT_FEED_URL, options = {}) {
-  if (!source.startsWith("http://") && !source.startsWith("https://")) {
-    return JSON.parse(await readFile(source, "utf8"));
-  }
-  if (options.offline) {
-    const cached2 = await readCache(source);
-    if (!cached2) {
-      throw new Error(`offline mode: no cached feed available for ${source}`);
-    }
-    return JSON.parse(cached2.body);
-  }
-  if (!options.refresh) {
-    const cached2 = await readCache(source);
-    if (cached2 && isFresh(cached2)) {
-      return JSON.parse(cached2.body);
-    }
-  }
-  try {
-    const res = await fetch(source);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const bodyText = await res.text();
-    try {
-      const digestRes = await fetch(`${source}.sha256`);
-      if (digestRes.ok) {
-        const digestText = await digestRes.text();
-        const expectedHash = digestText.trim().split(/\s+/)[0]?.toLowerCase();
-        const actualHash = createHash2("sha256").update(bodyText).digest("hex").toLowerCase();
-        if (expectedHash && actualHash !== expectedHash) {
-          console.error(
-            import_picocolors.default.yellow(
-              "\u26A0 feed digest mismatch \u2014 feed may be tampered with or mid-update"
-            )
-          );
-          if (options.strict) {
-            throw new Error("feed digest mismatch (strict mode)");
-          }
-        }
-      }
-    } catch (err) {
-      if (err instanceof Error && err.message.includes("strict mode")) {
-        throw err;
-      }
-    }
-    await writeCache(source, bodyText);
-    return JSON.parse(bodyText);
-  } catch (err) {
-    if (err instanceof Error && err.message.includes("strict mode")) {
-      throw err;
-    }
-    const fallback = await readCache(source);
-    if (fallback) {
-      const dateStr = new Date(fallback.fetchedAt).toISOString();
-      console.error(
-        import_picocolors.default.yellow(`\u26A0 network unavailable \u2014 using cached feed from ${dateStr}`)
-      );
-      return JSON.parse(fallback.body);
-    }
-    throw new Error(`failed to fetch feed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-}
-function appendIndexEntry(index, key, entry) {
-  const entries = index.get(key) ?? [];
-  entries.push(entry);
-  index.set(key, entries);
-}
-function buildArtifactIndex(feed) {
-  const byName = /* @__PURE__ */ new Map();
-  const byEcosystemAndName = /* @__PURE__ */ new Map();
-  for (const advisory of feed.advisories) {
-    if (advisory.withdrawn) continue;
-    for (const artifact of advisory.artifacts) {
-      const normalizedName = artifact.name.toLowerCase();
-      const entry = { advisory, artifact };
-      appendIndexEntry(byName, normalizedName, entry);
-      appendIndexEntry(
-        byEcosystemAndName,
-        `${artifact.ecosystem}:${normalizedName}`,
-        entry
-      );
-    }
-  }
-  return { byName, byEcosystemAndName };
-}
-function matchNames(feed, names, options = {}) {
-  const index = options.index ?? buildArtifactIndex(feed);
-  const matches = [];
-  for (const query of names) {
-    const q = query.toLowerCase();
-    const entries = options.ecosystem ? index.byEcosystemAndName.get(`${options.ecosystem}:${q}`) ?? [] : index.byName.get(q) ?? [];
-    const grouped = /* @__PURE__ */ new Map();
-    for (const { advisory, artifact } of entries) {
-      if (!artifactAffectsVersion(artifact, options.version)) continue;
-      const group = grouped.get(advisory.id) ?? {
-        advisory,
-        names: /* @__PURE__ */ new Set(),
-        ecosystems: /* @__PURE__ */ new Set()
-      };
-      group.names.add(artifact.name);
-      group.ecosystems.add(artifact.ecosystem);
-      grouped.set(advisory.id, group);
-    }
-    for (const group of grouped.values()) {
-      matches.push({
-        query,
-        advisory: group.advisory,
-        artifactNames: [...group.names],
-        artifactEcosystems: [...group.ecosystems],
-        version: options.version
-      });
-    }
-  }
-  return matches;
-}
-function collectKnownNames(feed, ecosystem) {
-  const names = /* @__PURE__ */ new Set();
-  for (const adv of feed.advisories) {
-    if (adv.withdrawn) continue;
-    for (const art of adv.artifacts) {
-      if (!ecosystem || art.ecosystem === ecosystem) names.add(art.name);
-    }
-  }
-  return [...names];
-}
-function matchHashes(feed, hashes) {
-  const wanted = /* @__PURE__ */ new Map();
-  for (const adv of feed.advisories) {
-    if (adv.withdrawn) continue;
-    for (const art of adv.artifacts) {
-      for (const h of art.sha256 ?? []) {
-        const key = h.toLowerCase();
-        const ids = wanted.get(key) ?? [];
-        if (!ids.includes(adv.id)) ids.push(adv.id);
-        wanted.set(key, ids);
-      }
-    }
-  }
-  const out = [];
-  for (const h of hashes) {
-    const ids = wanted.get(h.toLowerCase());
-    if (ids) out.push({ sha256: h.toLowerCase(), advisoryIds: ids });
-  }
-  return out;
-}
-
-// src/types.ts
-var ECOSYSTEMS = [
-  "claude-skill",
-  "claude-plugin",
-  "clawhub",
-  "mcp-server",
-  "npm",
-  "pypi",
-  "vscode-extension",
-  "github-action"
-];
-
-// src/scan.ts
-import { readdir } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
-
-// src/concurrency.ts
-function positiveInteger(value, name) {
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new RangeError(`${name} must be a positive integer`);
-  }
-  return value;
-}
-async function mapConcurrent(values, concurrency, mapper) {
-  positiveInteger(concurrency, "concurrency");
-  const results = new Array(values.length);
-  let nextIndex = 0;
-  async function worker() {
-    while (true) {
-      const index = nextIndex++;
-      if (index >= values.length) return;
-      results[index] = await mapper(values[index], index);
-    }
-  }
-  const workerCount = Math.min(concurrency, values.length);
-  await Promise.all(Array.from({ length: workerCount }, () => worker()));
-  return results;
-}
-
-// src/hash.ts
-import { createHash as createHash3 } from "node:crypto";
-import { createReadStream, promises as fs2 } from "node:fs";
-import path2 from "node:path";
-var MAX_HASHABLE_FILE_BYTES = 10 * 1024 * 1024;
-var MAX_HASHED_FILES = 1e4;
-var MAX_HASHED_BYTES = 256 * 1024 * 1024;
-var DEFAULT_HASH_CONCURRENCY = 4;
-function boundedBytes(value, name) {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new RangeError(`${name} must be a non-negative safe integer`);
-  }
-  return value;
-}
-async function sha256File(filePath) {
-  const hash = createHash3("sha256");
-  for await (const chunk of createReadStream(filePath)) hash.update(chunk);
-  return hash.digest("hex");
-}
-async function hashSkillDirDetailed(dir, options = {}) {
-  const concurrency = positiveInteger(options.concurrency ?? DEFAULT_HASH_CONCURRENCY, "concurrency");
-  const maxFileBytes = boundedBytes(
-    options.maxFileBytes ?? MAX_HASHABLE_FILE_BYTES,
-    "maxFileBytes"
-  );
-  const maxFiles = positiveInteger(options.maxFiles ?? MAX_HASHED_FILES, "maxFiles");
-  const maxTotalBytes = boundedBytes(options.maxTotalBytes ?? MAX_HASHED_BYTES, "maxTotalBytes");
-  const excluded = new Set(options.excludeDirectories ?? []);
-  const candidates = [];
-  const stats = {
-    discoveredFiles: 0,
-    hashedFiles: 0,
-    hashedBytes: 0,
-    skippedLargeFiles: 0,
-    skippedBudgetFiles: 0,
-    skippedSymlinks: 0,
-    skippedExcludedDirectories: 0,
-    unreadableEntries: 0,
-    budgetExhausted: false
-  };
-  let reservedBytes = 0;
-  async function walk(current) {
-    let entries;
-    try {
-      entries = await fs2.readdir(current, { withFileTypes: true });
-    } catch {
-      stats.unreadableEntries++;
-      return;
-    }
-    entries.sort((left, right) => left.name.localeCompare(right.name));
-    for (const entry of entries) {
-      const fullPath = path2.join(current, entry.name);
-      if (entry.isSymbolicLink()) {
-        stats.skippedSymlinks++;
-      } else if (entry.isDirectory()) {
-        if (excluded.has(entry.name)) {
-          stats.skippedExcludedDirectories++;
-        } else {
-          await walk(fullPath);
-        }
-      } else if (entry.isFile()) {
-        stats.discoveredFiles++;
-        let bytes;
-        try {
-          bytes = (await fs2.stat(fullPath)).size;
-        } catch {
-          stats.unreadableEntries++;
-          continue;
-        }
-        if (bytes > maxFileBytes) {
-          stats.skippedLargeFiles++;
-          continue;
-        }
-        if (candidates.length >= maxFiles || reservedBytes + bytes > maxTotalBytes) {
-          stats.skippedBudgetFiles++;
-          stats.budgetExhausted = true;
-          continue;
-        }
-        reservedBytes += bytes;
-        candidates.push({ fullPath, relativePath: path2.relative(dir, fullPath), bytes });
-      }
-    }
-  }
-  await walk(dir);
-  const hashed = await mapConcurrent(
-    candidates,
-    concurrency,
-    async (candidate) => {
-      try {
-        return {
-          file: candidate.relativePath,
-          sha256: await sha256File(candidate.fullPath),
-          bytes: candidate.bytes
-        };
-      } catch {
-        stats.unreadableEntries++;
-        return null;
-      }
-    }
-  );
-  const files = hashed.filter((value) => value !== null);
-  stats.hashedFiles = files.length;
-  stats.hashedBytes = files.reduce((total, file) => total + (file.bytes ?? 0), 0);
-  return { files, stats };
-}
-
-// src/metadata.ts
-import { readFile as readFile2 } from "node:fs/promises";
-import path3 from "node:path";
-function nonEmptyString(value) {
-  return typeof value === "string" && value.trim() !== "" ? value.trim() : void 0;
-}
-async function readPackageMetadata(skillPath) {
-  try {
-    const parsed = JSON.parse(await readFile2(path3.join(skillPath, "package.json"), "utf8"));
-    return {
-      name: nonEmptyString(parsed.name),
-      version: nonEmptyString(parsed.version)
-    };
-  } catch {
-    return {};
-  }
-}
-async function readSkillFrontmatter(skillPath) {
-  try {
-    const contents = await readFile2(path3.join(skillPath, "SKILL.md"), "utf8");
-    const frontmatter = contents.match(/^---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
-    if (!frontmatter) return {};
-    const fields = {};
-    for (const line of frontmatter.split(/\r?\n/)) {
-      const match = line.match(/^([A-Za-z][\w-]*):\s*(.*?)\s*$/);
-      if (!match) continue;
-      fields[match[1].toLowerCase()] = match[2].replace(/^(["'])(.*)\1$/, "$2");
-    }
-    return {
-      name: nonEmptyString(fields.name),
-      version: nonEmptyString(fields.version)
-    };
-  } catch {
-    return {};
-  }
-}
-function inferEcosystemFromDirectory(dir) {
-  const normalized = dir.replaceAll("\\", "/").toLowerCase().replace(/\/$/, "");
-  if (normalized.endsWith("/.claude/skills")) return "claude-skill";
-  if (normalized.endsWith("/.openclaw/skills") || normalized.endsWith("/.clawdbot/skills") || normalized.endsWith("/.moltbot/skills")) {
-    return "clawhub";
-  }
-  return void 0;
-}
-async function detectSkillMetadata(skillPath, fallbackName, ecosystem) {
-  const [skill, pkg] = await Promise.all([
-    readSkillFrontmatter(skillPath),
-    readPackageMetadata(skillPath)
-  ]);
-  return {
-    path: skillPath,
-    name: skill.name ?? pkg.name ?? fallbackName,
-    version: skill.version ?? pkg.version,
-    ecosystem
-  };
-}
-
-// src/typosquat.ts
-function levenshtein(a, b, max) {
-  if (a === b) return 0;
-  if (Math.abs(a.length - b.length) > max) return Infinity;
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n <= max ? n : Infinity;
-  if (n === 0) return m <= max ? m : Infinity;
-  let prev = new Array(n + 1);
-  let curr = new Array(n + 1);
-  for (let j = 0; j <= n; j++) prev[j] = j;
-  for (let i = 1; i <= m; i++) {
-    curr[0] = i;
-    let rowMin = curr[0];
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-      if (curr[j] < rowMin) rowMin = curr[j];
-    }
-    if (rowMin > max) return Infinity;
-    [prev, curr] = [curr, prev];
-  }
-  return prev[n] <= max ? prev[n] : Infinity;
-}
-function maxDistanceForLength(length) {
-  if (length < 5) return 0;
-  if (length <= 7) return 1;
-  return 2;
-}
-function findNearMatches(candidate, knownNames) {
-  const c = candidate.toLowerCase();
-  const results = [];
-  for (const known of knownNames) {
-    const k = known.toLowerCase();
-    if (k === c) continue;
-    const max = maxDistanceForLength(Math.max(k.length, c.length));
-    if (max === 0) continue;
-    const d = levenshtein(c, k, max);
-    if (d !== Infinity && d >= 1 && d <= max) {
-      results.push({ name: known, distance: d });
-    }
-  }
-  return results.sort((x, y) => x.distance - y.distance);
-}
-
-// src/scan.ts
-var KNOWN_SKILL_DIRS = [
-  ".claude/skills",
-  ".openclaw/skills",
-  ".clawdbot/skills",
-  ".moltbot/skills"
-];
-var DEFAULT_SCAN_CONCURRENCY = 4;
-var DEFAULT_METADATA_CONCURRENCY = 8;
-function defaultSkillDirs() {
-  return KNOWN_SKILL_DIRS.map((d) => join(homedir(), d));
-}
-async function listInstalledSkills(dirs, ecosystem, concurrency = DEFAULT_METADATA_CONCURRENCY) {
-  positiveInteger(concurrency, "metadata concurrency");
-  const found = [];
-  for (const dir of dirs) {
-    try {
-      const entries = await readdir(dir, { withFileTypes: true });
-      const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
-      const inferredEcosystem = ecosystem ?? inferEcosystemFromDirectory(dir);
-      const skills = await mapConcurrent(
-        folders.map((name) => ({ path: join(dir, name), name })),
-        concurrency,
-        ({ path: path4, name }) => detectSkillMetadata(path4, name, inferredEcosystem)
-      );
-      found.push({ dir, names: skills.map((skill) => skill.name), skills });
-    } catch {
-    }
-  }
-  return found;
-}
-async function scanSkills(dirs, feed, options = {}) {
-  const concurrency = positiveInteger(
-    options.concurrency ?? DEFAULT_SCAN_CONCURRENCY,
-    "scan concurrency"
-  );
-  const installed = await listInstalledSkills(
-    dirs,
-    options.ecosystem,
-    options.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY
-  );
-  const knownNames = collectKnownNames(feed);
-  const artifactIndex = buildArtifactIndex(feed);
-  const advisoryMap = /* @__PURE__ */ new Map();
-  for (const adv of feed.advisories) {
-    advisoryMap.set(adv.id, adv);
-  }
-  const skills = installed.flatMap((group) => group.skills);
-  const artifactResults = await mapConcurrent(skills, concurrency, async (skill) => {
-    const { name, version: version2, ecosystem } = skill;
-    const skillPath = skill.path;
-    const matches2 = [];
-    const warnings2 = [];
-    let matchedInSkill = false;
-    const matchedAdvisoryIds = /* @__PURE__ */ new Set();
-    const nameHits = matchNames(feed, [name], {
-      index: artifactIndex,
-      ecosystem,
-      version: version2
-    });
-    for (const nh of nameHits) {
-      matchedInSkill = true;
-      matchedAdvisoryIds.add(nh.advisory.id);
-      matches2.push({
-        query: name,
-        advisory: nh.advisory,
-        artifactNames: nh.artifactNames,
-        artifactEcosystems: nh.artifactEcosystems,
-        version: version2,
-        matchedBy: "name"
-      });
-    }
-    const hashResult = await hashSkillDirDetailed(skillPath, options.hash);
-    const hashedFiles = hashResult.files;
-    const hashHits = matchHashes(
-      feed,
-      hashedFiles.map((h) => h.sha256)
-    );
-    for (const hh of hashHits) {
-      const matchingFile = hashedFiles.find((hf) => hf.sha256 === hh.sha256);
-      for (const advId of hh.advisoryIds) {
-        if (!matchedAdvisoryIds.has(advId)) {
-          matchedInSkill = true;
-          matchedAdvisoryIds.add(advId);
-          const adv = advisoryMap.get(advId);
-          if (adv) {
-            matches2.push({
-              query: name,
-              advisory: adv,
-              artifactNames: adv.artifacts.map((a) => a.name),
-              artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
-              version: version2,
-              matchedBy: "sha256",
-              file: matchingFile?.file,
-              sha256: hh.sha256
-            });
-          }
-        }
-      }
-    }
-    if (!matchedInSkill) {
-      const near = findNearMatches(name, knownNames);
-      for (const nm of near) {
-        warnings2.push({
-          name,
-          similarTo: nm.name,
-          distance: nm.distance
-        });
-      }
-    }
-    return { matches: matches2, warnings: warnings2, hashStats: hashResult.stats };
-  });
-  const matches = artifactResults.flatMap((result) => result.matches);
-  const warnings = artifactResults.flatMap((result) => result.warnings);
-  const stats = {
-    discoveredFiles: 0,
-    hashedFiles: 0,
-    hashedBytes: 0,
-    skippedLargeFiles: 0,
-    skippedBudgetFiles: 0,
-    skippedSymlinks: 0,
-    skippedExcludedDirectories: 0,
-    unreadableEntries: 0,
-    budgetExhausted: false,
-    artifactsWithExhaustedBudgets: 0
-  };
-  for (const result of artifactResults) {
-    const hashStats = result.hashStats;
-    stats.discoveredFiles += hashStats.discoveredFiles;
-    stats.hashedFiles += hashStats.hashedFiles;
-    stats.hashedBytes += hashStats.hashedBytes;
-    stats.skippedLargeFiles += hashStats.skippedLargeFiles;
-    stats.skippedBudgetFiles += hashStats.skippedBudgetFiles;
-    stats.skippedSymlinks += hashStats.skippedSymlinks;
-    stats.skippedExcludedDirectories += hashStats.skippedExcludedDirectories;
-    stats.unreadableEntries += hashStats.unreadableEntries;
-    if (hashStats.budgetExhausted) {
-      stats.budgetExhausted = true;
-      stats.artifactsWithExhaustedBudgets++;
-    }
-  }
-  return { installed, scannedCount: skills.length, matches, warnings, stats };
-}
-
-// src/sarif.ts
-function severityToLevel(severity) {
-  switch (severity) {
-    case "critical":
-    case "high":
-      return "error";
-    case "medium":
-      return "warning";
-    default:
-      return "note";
-  }
-}
-function buildSarif(findings, toolVersion) {
-  const rules = /* @__PURE__ */ new Map();
-  for (const f of findings) {
-    if (!rules.has(f.advisoryId)) {
-      rules.set(f.advisoryId, {
-        id: f.advisoryId,
-        shortDescription: { text: f.summary },
-        helpUri: "https://github.com/Akshay7273/skill-advisories"
-      });
-    }
-  }
-  return {
-    $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-    version: "2.1.0",
-    runs: [
-      {
-        tool: {
-          driver: {
-            name: "skill-advisories",
-            informationUri: "https://github.com/Akshay7273/skill-advisories",
-            version: toolVersion,
-            rules: [...rules.values()]
-          }
-        },
-        results: findings.map((f) => ({
-          ruleId: f.advisoryId,
-          level: severityToLevel(f.severity),
-          message: {
-            text: `${f.artifactName} matches ${f.advisoryId} (matched by ${f.matchedBy}): ${f.summary}`
-          },
-          locations: [
-            {
-              physicalLocation: {
-                artifactLocation: { uri: f.file ?? f.artifactName }
-              }
-            }
-          ]
-        }))
-      }
-    ]
-  };
-}
-var SEVERITY_ORDER = ["low", "medium", "high", "critical"];
-function meetsThreshold(severity, failOn) {
-  const s = SEVERITY_ORDER.indexOf(severity);
-  const t = SEVERITY_ORDER.indexOf(failOn);
-  if (s === -1 || t === -1) return true;
-  return s >= t;
-}
-
-// src/verify.ts
-import { createHash as createHash5 } from "node:crypto";
-import { readFile as readFile3 } from "node:fs/promises";
-
-// src/delta.ts
-import { createHash as createHash4 } from "node:crypto";
-function feedCursor(feed) {
-  return createHash4("sha256").update(JSON.stringify(feed)).digest("hex");
-}
-function buildCompactFeed(feed) {
-  return {
-    schema_version: "1",
-    generated: feed.generated,
-    cursor: feedCursor(feed),
-    advisory_count: feed.advisory_count,
-    advisories: feed.advisories.map((advisory) => ({
-      id: advisory.id,
-      type: advisory.type,
-      severity: advisory.severity,
-      artifacts: advisory.artifacts,
-      references: advisory.references,
-      ...advisory.withdrawn ? { withdrawn: advisory.withdrawn } : {}
-    }))
-  };
 }
 
 // node_modules/zod/v4/core/core.js
@@ -1784,6 +1107,7 @@ var string = (params) => {
 };
 var integer = /^-?\d+$/;
 var number = /^-?\d+(?:\.\d+)?$/;
+var boolean = /^(?:true|false)$/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
@@ -2665,6 +1989,27 @@ var $ZodNumber = /* @__PURE__ */ $constructor("$ZodNumber", (inst, def) => {
 var $ZodNumberFormat = /* @__PURE__ */ $constructor("$ZodNumberFormat", (inst, def) => {
   $ZodCheckNumberFormat.init(inst, def);
   $ZodNumber.init(inst, def);
+});
+var $ZodBoolean = /* @__PURE__ */ $constructor("$ZodBoolean", (inst, def) => {
+  $ZodType.init(inst, def);
+  inst._zod.pattern = boolean;
+  inst._zod.parse = (payload, _ctx) => {
+    if (def.coerce)
+      try {
+        payload.value = Boolean(payload.value);
+      } catch (_) {
+      }
+    const input = payload.value;
+    if (typeof input === "boolean")
+      return payload;
+    payload.issues.push({
+      expected: "boolean",
+      code: "invalid_type",
+      input,
+      inst
+    });
+    return payload;
+  };
 });
 var $ZodUnknown = /* @__PURE__ */ $constructor("$ZodUnknown", (inst, def) => {
   $ZodType.init(inst, def);
@@ -3804,6 +3149,13 @@ function _int(Class2, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
+function _boolean(Class2, params) {
+  return new Class2({
+    type: "boolean",
+    ...normalizeParams(params)
+  });
+}
+// @__NO_SIDE_EFFECTS__
 function _unknown(Class2) {
   return new Class2({
     type: "unknown"
@@ -4448,6 +3800,9 @@ var numberProcessor = (schema, ctx, _json, _params) => {
   }
   if (typeof multipleOf === "number")
     json.multipleOf = multipleOf;
+};
+var booleanProcessor = (_schema, _ctx, json, _params) => {
+  json.type = "boolean";
 };
 var neverProcessor = (_schema, _ctx, json, _params) => {
   json.not = {};
@@ -5148,6 +4503,14 @@ var ZodNumberFormat = /* @__PURE__ */ $constructor("ZodNumberFormat", (inst, def
 function int(params) {
   return _int(ZodNumberFormat, params);
 }
+var ZodBoolean = /* @__PURE__ */ $constructor("ZodBoolean", (inst, def) => {
+  $ZodBoolean.init(inst, def);
+  ZodType.init(inst, def);
+  inst._zod.processJSONSchema = (ctx, json, params) => booleanProcessor(inst, ctx, json, params);
+});
+function boolean2(params) {
+  return _boolean(ZodBoolean, params);
+}
 var ZodUnknown = /* @__PURE__ */ $constructor("ZodUnknown", (inst, def) => {
   $ZodUnknown.init(inst, def);
   ZodType.init(inst, def);
@@ -5512,6 +4875,457 @@ function superRefine(fn, params) {
   return _superRefine(fn, params);
 }
 
+// src/types.ts
+var ECOSYSTEMS = [
+  "claude-skill",
+  "claude-plugin",
+  "clawhub",
+  "mcp-server",
+  "npm",
+  "pypi",
+  "vscode-extension",
+  "github-action"
+];
+
+// src/lock.ts
+var LockedArtifactSchema = object({
+  name: string2().min(1),
+  ecosystem: _enum(ECOSYSTEMS).optional(),
+  version: string2().min(1).optional(),
+  sha256: string2().regex(/^[a-f0-9]{64}$/),
+  files: number2().int().nonnegative()
+}).strict();
+var ArtifactLockSchema = object({
+  $schema: string2().url().optional(),
+  schema_version: literal("1"),
+  generated: string2().min(1),
+  artifacts: array(LockedArtifactSchema)
+}).strict();
+var LOCK_FILE_NAME = "skill-advisories.lock.json";
+function parseArtifactLock(input) {
+  return ArtifactLockSchema.parse(input);
+}
+function lockKey(artifact) {
+  return artifact.ecosystem ? `${artifact.ecosystem}:${artifact.name}` : artifact.name;
+}
+function lockedFrom(artifact) {
+  const locked = {
+    name: artifact.name,
+    sha256: artifact.sha256,
+    files: artifact.files
+  };
+  if (artifact.ecosystem) locked.ecosystem = artifact.ecosystem;
+  if (artifact.version) locked.version = artifact.version;
+  return locked;
+}
+function buildLock(artifacts, generated, previous) {
+  const incomplete = artifacts.filter((artifact) => artifact.incomplete);
+  if (incomplete.length > 0) {
+    throw new Error(
+      `cannot lock ${incomplete.map((artifact) => artifact.name).join(", ")}: the scan's resource budgets stopped the hash short, so the digest covers only part of the artifact`
+    );
+  }
+  const byKey = /* @__PURE__ */ new Map();
+  for (const artifact of artifacts) {
+    const locked2 = lockedFrom(artifact);
+    const key = lockKey(locked2);
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, locked2);
+      continue;
+    }
+    if (existing.sha256 !== locked2.sha256) {
+      throw new Error(
+        `cannot lock ${key}: two installed copies differ (${existing.sha256} and ${locked2.sha256})`
+      );
+    }
+  }
+  const locked = [...byKey.values()].sort(
+    (left, right) => lockKey(left).localeCompare(lockKey(right))
+  );
+  const unchanged = previous !== void 0 && JSON.stringify(previous.artifacts) === JSON.stringify(locked);
+  return {
+    schema_version: "1",
+    generated: unchanged ? previous.generated : generated,
+    artifacts: locked
+  };
+}
+function diffLock(lock, observed) {
+  const drift = {
+    unlocked: [],
+    changed: [],
+    missing: [],
+    indeterminate: [],
+    matched: []
+  };
+  const locked = new Map(lock.artifacts.map((artifact) => [lockKey(artifact), artifact]));
+  const seen = /* @__PURE__ */ new Set();
+  for (const artifact of observed) {
+    const key = lockKey(artifact);
+    seen.add(key);
+    const approved = locked.get(key);
+    if (artifact.incomplete) {
+      drift.indeterminate.push({
+        key,
+        reason: "the scan's resource budgets stopped the hash short"
+      });
+      continue;
+    }
+    if (!approved) {
+      drift.unlocked.push({ key, sha256: artifact.sha256 });
+      continue;
+    }
+    if (approved.sha256 !== artifact.sha256) {
+      const changed = {
+        key,
+        expected: approved.sha256,
+        actual: artifact.sha256
+      };
+      if (artifact.version) changed.version = artifact.version;
+      drift.changed.push(changed);
+      continue;
+    }
+    drift.matched.push(key);
+  }
+  for (const [key, artifact] of locked) {
+    if (!seen.has(key)) drift.missing.push({ key, sha256: artifact.sha256 });
+  }
+  return drift;
+}
+
+// src/lookup.ts
+var import_picocolors = __toESM(require_picocolors(), 1);
+import { createHash as createHash2 } from "node:crypto";
+import { readFile } from "node:fs/promises";
+
+// src/cache.ts
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+var DEFAULT_TTL_MS = 60 * 60 * 1e3;
+function cacheDir() {
+  const base = process.env.XDG_CACHE_HOME && process.env.XDG_CACHE_HOME !== "" ? process.env.XDG_CACHE_HOME : path.join(os.homedir(), ".cache");
+  return path.join(base, "skill-advisories");
+}
+function cacheFileFor(feedUrl) {
+  const key = createHash("sha256").update(feedUrl).digest("hex").slice(0, 16);
+  return path.join(cacheDir(), `feed-${key}.json`);
+}
+async function readCache(feedUrl) {
+  try {
+    const raw = await fs.readFile(cacheFileFor(feedUrl), "utf8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.fetchedAt !== "number" || typeof parsed.body !== "string") {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+async function writeCache(feedUrl, body) {
+  try {
+    await fs.mkdir(cacheDir(), { recursive: true });
+    const entry = { fetchedAt: Date.now(), body };
+    await fs.writeFile(cacheFileFor(feedUrl), JSON.stringify(entry));
+  } catch {
+  }
+}
+function isFresh(entry, ttlMs = DEFAULT_TTL_MS) {
+  return Date.now() - entry.fetchedAt < ttlMs;
+}
+
+// src/lookup.ts
+var DEFAULT_FEED_URL = "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/feed/feed.json";
+function normalizeVersion(version2) {
+  return version2.trim().replace(/^v(?=\d)/i, "");
+}
+function artifactAffectsVersion(artifact, version2) {
+  if (!version2 || !artifact.versions || artifact.versions.length === 0) return true;
+  if (artifact.versions.includes("*")) return true;
+  const wanted = normalizeVersion(version2);
+  return artifact.versions.some((candidate) => normalizeVersion(candidate) === wanted);
+}
+async function loadFeed(source = DEFAULT_FEED_URL, options = {}) {
+  if (!source.startsWith("http://") && !source.startsWith("https://")) {
+    return JSON.parse(await readFile(source, "utf8"));
+  }
+  if (options.offline) {
+    const cached2 = await readCache(source);
+    if (!cached2) {
+      throw new Error(`offline mode: no cached feed available for ${source}`);
+    }
+    return JSON.parse(cached2.body);
+  }
+  if (!options.refresh) {
+    const cached2 = await readCache(source);
+    if (cached2 && isFresh(cached2)) {
+      return JSON.parse(cached2.body);
+    }
+  }
+  try {
+    const res = await fetch(source);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const bodyText = await res.text();
+    try {
+      const digestRes = await fetch(`${source}.sha256`);
+      if (digestRes.ok) {
+        const digestText = await digestRes.text();
+        const expectedHash = digestText.trim().split(/\s+/)[0]?.toLowerCase();
+        const actualHash = createHash2("sha256").update(bodyText).digest("hex").toLowerCase();
+        if (expectedHash && actualHash !== expectedHash) {
+          console.error(
+            import_picocolors.default.yellow(
+              "\u26A0 feed digest mismatch \u2014 feed may be tampered with or mid-update"
+            )
+          );
+          if (options.strict) {
+            throw new Error("feed digest mismatch (strict mode)");
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("strict mode")) {
+        throw err;
+      }
+    }
+    await writeCache(source, bodyText);
+    return JSON.parse(bodyText);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("strict mode")) {
+      throw err;
+    }
+    const fallback = await readCache(source);
+    if (fallback) {
+      const dateStr = new Date(fallback.fetchedAt).toISOString();
+      console.error(
+        import_picocolors.default.yellow(`\u26A0 network unavailable \u2014 using cached feed from ${dateStr}`)
+      );
+      return JSON.parse(fallback.body);
+    }
+    throw new Error(`failed to fetch feed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+function appendIndexEntry(index, key, entry) {
+  const entries = index.get(key) ?? [];
+  entries.push(entry);
+  index.set(key, entries);
+}
+function buildArtifactIndex(feed) {
+  const byName = /* @__PURE__ */ new Map();
+  const byEcosystemAndName = /* @__PURE__ */ new Map();
+  for (const advisory of feed.advisories) {
+    if (advisory.withdrawn) continue;
+    for (const artifact of advisory.artifacts) {
+      const normalizedName = artifact.name.toLowerCase();
+      const entry = { advisory, artifact };
+      appendIndexEntry(byName, normalizedName, entry);
+      appendIndexEntry(
+        byEcosystemAndName,
+        `${artifact.ecosystem}:${normalizedName}`,
+        entry
+      );
+    }
+  }
+  return { byName, byEcosystemAndName };
+}
+function matchNames(feed, names, options = {}) {
+  const index = options.index ?? buildArtifactIndex(feed);
+  const matches = [];
+  for (const query of names) {
+    const q = query.toLowerCase();
+    const entries = options.ecosystem ? index.byEcosystemAndName.get(`${options.ecosystem}:${q}`) ?? [] : index.byName.get(q) ?? [];
+    const grouped = /* @__PURE__ */ new Map();
+    for (const { advisory, artifact } of entries) {
+      if (!artifactAffectsVersion(artifact, options.version)) continue;
+      const group = grouped.get(advisory.id) ?? {
+        advisory,
+        names: /* @__PURE__ */ new Set(),
+        ecosystems: /* @__PURE__ */ new Set()
+      };
+      group.names.add(artifact.name);
+      group.ecosystems.add(artifact.ecosystem);
+      grouped.set(advisory.id, group);
+    }
+    for (const group of grouped.values()) {
+      matches.push({
+        query,
+        advisory: group.advisory,
+        artifactNames: [...group.names],
+        artifactEcosystems: [...group.ecosystems],
+        version: options.version
+      });
+    }
+  }
+  return matches;
+}
+function collectKnownNames(feed, ecosystem) {
+  const names = /* @__PURE__ */ new Set();
+  for (const adv of feed.advisories) {
+    if (adv.withdrawn) continue;
+    for (const art of adv.artifacts) {
+      if (!ecosystem || art.ecosystem === ecosystem) names.add(art.name);
+    }
+  }
+  return [...names];
+}
+function matchHashes(feed, hashes) {
+  const wanted = /* @__PURE__ */ new Map();
+  for (const adv of feed.advisories) {
+    if (adv.withdrawn) continue;
+    for (const art of adv.artifacts) {
+      for (const h of art.sha256 ?? []) {
+        const key = h.toLowerCase();
+        const ids = wanted.get(key) ?? [];
+        if (!ids.includes(adv.id)) ids.push(adv.id);
+        wanted.set(key, ids);
+      }
+    }
+  }
+  const out = [];
+  for (const h of hashes) {
+    const ids = wanted.get(h.toLowerCase());
+    if (ids) out.push({ sha256: h.toLowerCase(), advisoryIds: ids });
+  }
+  return out;
+}
+
+// src/policy.ts
+import { readFile as readFile2 } from "node:fs/promises";
+
+// src/sarif.ts
+function severityToLevel(severity) {
+  switch (severity) {
+    case "critical":
+    case "high":
+      return "error";
+    case "medium":
+      return "warning";
+    default:
+      return "note";
+  }
+}
+function buildSarif(findings, toolVersion) {
+  const rules = /* @__PURE__ */ new Map();
+  for (const f of findings) {
+    if (!rules.has(f.advisoryId)) {
+      rules.set(f.advisoryId, {
+        id: f.advisoryId,
+        shortDescription: { text: f.summary },
+        helpUri: "https://github.com/Akshay7273/skill-advisories"
+      });
+    }
+  }
+  return {
+    $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+    version: "2.1.0",
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: "skill-advisories",
+            informationUri: "https://github.com/Akshay7273/skill-advisories",
+            version: toolVersion,
+            rules: [...rules.values()]
+          }
+        },
+        results: findings.map((f) => ({
+          ruleId: f.advisoryId,
+          level: severityToLevel(f.severity),
+          message: {
+            text: `${f.artifactName} matches ${f.advisoryId} (matched by ${f.matchedBy}): ${f.summary}`
+          },
+          locations: [
+            {
+              physicalLocation: {
+                artifactLocation: { uri: f.file ?? f.artifactName }
+              }
+            }
+          ]
+        }))
+      }
+    ]
+  };
+}
+var SEVERITY_ORDER = ["low", "medium", "high", "critical"];
+function meetsThreshold(severity, failOn) {
+  const s = SEVERITY_ORDER.indexOf(severity);
+  const t = SEVERITY_ORDER.indexOf(failOn);
+  if (s === -1 || t === -1) return true;
+  return s >= t;
+}
+
+// src/policy.ts
+var AdvisoryPolicySchema = object({
+  $schema: string2().url().optional(),
+  schemaVersion: literal("1"),
+  failOn: _enum(["low", "medium", "high", "critical"]).default("high"),
+  deniedEcosystems: array(_enum(ECOSYSTEMS)).default([]),
+  requireHash: boolean2().default(false),
+  warnings: _enum(["allow", "review", "block"]).default("review"),
+  // What to do about an installed artifact the lockfile never approved.
+  // Defaults to review rather than block so a repository can adopt a lockfile
+  // without its next unrelated pull request failing on artifacts that were
+  // already there and were never in question.
+  unlockedArtifacts: _enum(["allow", "review", "block"]).default("review"),
+  // How old the feed may be before this repo stops trusting it. Owned by the
+  // policy rather than the caller so the rule travels with the repo instead
+  // of living in whichever CI invocation happens to run the check.
+  maxFeedAgeHours: number2().int().positive().default(DEFAULT_MAX_FEED_AGE_HOURS)
+}).strict();
+function parsePolicy(input) {
+  return AdvisoryPolicySchema.parse(input);
+}
+async function loadPolicy(path4) {
+  const raw = await readFile2(path4, "utf8");
+  try {
+    return parsePolicy(JSON.parse(raw));
+  } catch (error) {
+    throw new Error(`invalid advisory policy ${path4}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+function evaluateLockDrift(drift, policy) {
+  if (policy.unlockedArtifacts === "allow") return { decision: "allow", reasons: [], policy };
+  const reasons = [];
+  for (const entry of drift.changed) {
+    reasons.push(`${entry.key} does not match its approved contents (expected ${entry.expected})`);
+  }
+  for (const entry of drift.unlocked) {
+    reasons.push(`${entry.key} is installed but not approved by the lockfile`);
+  }
+  for (const entry of drift.indeterminate) {
+    reasons.push(`${entry.key} could not be compared to the lockfile: ${entry.reason}`);
+  }
+  if (reasons.length === 0) return { decision: "allow", reasons: [], policy };
+  return { decision: policy.unlockedArtifacts, reasons, policy };
+}
+
+// src/rollback.ts
+import { readFile as readFile4 } from "node:fs/promises";
+
+// src/delta.ts
+import { createHash as createHash3 } from "node:crypto";
+function feedCursor(feed) {
+  return createHash3("sha256").update(JSON.stringify(feed)).digest("hex");
+}
+function buildCompactFeed(feed) {
+  return {
+    schema_version: "1",
+    generated: feed.generated,
+    cursor: feedCursor(feed),
+    advisory_count: feed.advisory_count,
+    advisories: feed.advisories.map((advisory) => ({
+      id: advisory.id,
+      type: advisory.type,
+      severity: advisory.severity,
+      artifacts: advisory.artifacts,
+      references: advisory.references,
+      ...advisory.withdrawn ? { withdrawn: advisory.withdrawn } : {}
+    }))
+  };
+}
+
 // src/history.ts
 var FeedHistoryEntrySchema = object({
   cursor: string2().regex(/^[a-f0-9]{64}$/),
@@ -5569,6 +5383,8 @@ function verifyFeedAgainstHistory(feed, history, digest) {
 }
 
 // src/verify.ts
+import { createHash as createHash4 } from "node:crypto";
+import { readFile as readFile3 } from "node:fs/promises";
 var VerifyUnavailableError = class extends Error {
 };
 async function read(path4) {
@@ -5596,7 +5412,7 @@ async function readPublished(path4) {
     return void 0;
   }
 }
-var sha256 = (contents) => createHash5("sha256").update(contents).digest("hex");
+var sha256 = (contents) => createHash4("sha256").update(contents).digest("hex");
 function parseChecksumManifest(contents) {
   const entries = /* @__PURE__ */ new Map();
   for (const [position, line] of contents.split("\n").entries()) {
@@ -5689,6 +5505,502 @@ async function verifyFeedDirectory(dir, options = {}) {
   };
 }
 
+// src/rollback.ts
+async function loadHistory(path4) {
+  let raw;
+  try {
+    raw = await readFile4(path4, "utf8");
+  } catch (error) {
+    throw new VerifyUnavailableError(
+      `cannot read ${path4}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+  try {
+    return parseFeedHistory(JSON.parse(raw));
+  } catch (error) {
+    throw new VerifyUnavailableError(
+      `${path4} is not a valid feed history: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+async function examine(dir, history, historyPath) {
+  let copy;
+  try {
+    copy = await verifyFeedDirectory(dir);
+  } catch (error) {
+    if (error instanceof VerifyUnavailableError) return { dir, problems: [error.message] };
+    throw error;
+  }
+  const problems = [...copy.problems];
+  const position = history.entries.findIndex((entry2) => entry2.cursor === copy.cursor);
+  const entry = history.entries[position];
+  if (!entry) {
+    problems.push(`cursor ${copy.cursor} does not appear in ${historyPath}`);
+  } else if (entry.digest !== copy.digest) {
+    problems.push(`digest ${copy.digest} does not match the digest ${historyPath} published`);
+  }
+  return {
+    dir,
+    cursor: copy.cursor,
+    digest: copy.digest,
+    advisoryCount: copy.advisoryCount,
+    ...entry ? { position, generated: entry.generated } : {},
+    problems
+  };
+}
+async function selectRecoveryPoint(historyPath, dirs) {
+  if (dirs.length === 0) {
+    throw new VerifyUnavailableError("no candidate feed directories were given");
+  }
+  const history = await loadHistory(historyPath);
+  const problems = verifyHistoryChain(history);
+  const candidates = [];
+  for (const dir of dirs) {
+    candidates.push(await examine(dir, history, historyPath));
+  }
+  candidates.sort((a, b) => (b.position ?? -1) - (a.position ?? -1));
+  const selected = problems.length > 0 ? void 0 : candidates.find(
+    (candidate) => candidate.position !== void 0 && candidate.problems.length === 0
+  );
+  return {
+    history: historyPath,
+    published: history.entries.length,
+    candidates,
+    ...selected ? { selected } : {},
+    problems
+  };
+}
+
+// src/scan.ts
+import { readdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+// src/concurrency.ts
+function positiveInteger(value, name) {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be a positive integer`);
+  }
+  return value;
+}
+async function mapConcurrent(values, concurrency, mapper) {
+  positiveInteger(concurrency, "concurrency");
+  const results = new Array(values.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= values.length) return;
+      results[index] = await mapper(values[index], index);
+    }
+  }
+  const workerCount = Math.min(concurrency, values.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
+// src/hash.ts
+import { createHash as createHash5 } from "node:crypto";
+import { createReadStream, promises as fs2 } from "node:fs";
+import path2 from "node:path";
+var MAX_HASHABLE_FILE_BYTES = 10 * 1024 * 1024;
+var MAX_HASHED_FILES = 1e4;
+var MAX_HASHED_BYTES = 256 * 1024 * 1024;
+var DEFAULT_HASH_CONCURRENCY = 4;
+function boundedBytes(value, name) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${name} must be a non-negative safe integer`);
+  }
+  return value;
+}
+async function sha256File(filePath) {
+  const hash = createHash5("sha256");
+  for await (const chunk of createReadStream(filePath)) hash.update(chunk);
+  return hash.digest("hex");
+}
+async function hashSkillDirDetailed(dir, options = {}) {
+  const concurrency = positiveInteger(options.concurrency ?? DEFAULT_HASH_CONCURRENCY, "concurrency");
+  const maxFileBytes = boundedBytes(
+    options.maxFileBytes ?? MAX_HASHABLE_FILE_BYTES,
+    "maxFileBytes"
+  );
+  const maxFiles = positiveInteger(options.maxFiles ?? MAX_HASHED_FILES, "maxFiles");
+  const maxTotalBytes = boundedBytes(options.maxTotalBytes ?? MAX_HASHED_BYTES, "maxTotalBytes");
+  const excluded = new Set(options.excludeDirectories ?? []);
+  const candidates = [];
+  const stats = {
+    discoveredFiles: 0,
+    hashedFiles: 0,
+    hashedBytes: 0,
+    skippedLargeFiles: 0,
+    skippedBudgetFiles: 0,
+    skippedSymlinks: 0,
+    skippedExcludedDirectories: 0,
+    unreadableEntries: 0,
+    budgetExhausted: false
+  };
+  let reservedBytes = 0;
+  async function walk(current) {
+    let entries;
+    try {
+      entries = await fs2.readdir(current, { withFileTypes: true });
+    } catch {
+      stats.unreadableEntries++;
+      return;
+    }
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      const fullPath = path2.join(current, entry.name);
+      if (entry.isSymbolicLink()) {
+        stats.skippedSymlinks++;
+      } else if (entry.isDirectory()) {
+        if (excluded.has(entry.name)) {
+          stats.skippedExcludedDirectories++;
+        } else {
+          await walk(fullPath);
+        }
+      } else if (entry.isFile()) {
+        stats.discoveredFiles++;
+        let bytes;
+        try {
+          bytes = (await fs2.stat(fullPath)).size;
+        } catch {
+          stats.unreadableEntries++;
+          continue;
+        }
+        if (bytes > maxFileBytes) {
+          stats.skippedLargeFiles++;
+          continue;
+        }
+        if (candidates.length >= maxFiles || reservedBytes + bytes > maxTotalBytes) {
+          stats.skippedBudgetFiles++;
+          stats.budgetExhausted = true;
+          continue;
+        }
+        reservedBytes += bytes;
+        candidates.push({ fullPath, relativePath: path2.relative(dir, fullPath), bytes });
+      }
+    }
+  }
+  await walk(dir);
+  const hashed = await mapConcurrent(
+    candidates,
+    concurrency,
+    async (candidate) => {
+      try {
+        return {
+          file: candidate.relativePath,
+          sha256: await sha256File(candidate.fullPath),
+          bytes: candidate.bytes
+        };
+      } catch {
+        stats.unreadableEntries++;
+        return null;
+      }
+    }
+  );
+  const files = hashed.filter((value) => value !== null);
+  stats.hashedFiles = files.length;
+  stats.hashedBytes = files.reduce((total, file) => total + (file.bytes ?? 0), 0);
+  return { files, stats };
+}
+function artifactDigest(files) {
+  const hash = createHash5("sha256");
+  const lines = files.map((file) => ({ path: file.file.replaceAll("\\", "/"), sha256: file.sha256 })).sort((left, right) => left.path.localeCompare(right.path));
+  for (const line of lines) hash.update(`${line.sha256}  ${line.path}
+`);
+  return hash.digest("hex");
+}
+
+// src/metadata.ts
+import { readFile as readFile5 } from "node:fs/promises";
+import path3 from "node:path";
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : void 0;
+}
+async function readPackageMetadata(skillPath) {
+  try {
+    const parsed = JSON.parse(await readFile5(path3.join(skillPath, "package.json"), "utf8"));
+    return {
+      name: nonEmptyString(parsed.name),
+      version: nonEmptyString(parsed.version)
+    };
+  } catch {
+    return {};
+  }
+}
+async function readSkillFrontmatter(skillPath) {
+  try {
+    const contents = await readFile5(path3.join(skillPath, "SKILL.md"), "utf8");
+    const frontmatter = contents.match(/^---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
+    if (!frontmatter) return {};
+    const fields = {};
+    for (const line of frontmatter.split(/\r?\n/)) {
+      const match = line.match(/^([A-Za-z][\w-]*):\s*(.*?)\s*$/);
+      if (!match) continue;
+      fields[match[1].toLowerCase()] = match[2].replace(/^(["'])(.*)\1$/, "$2");
+    }
+    return {
+      name: nonEmptyString(fields.name),
+      version: nonEmptyString(fields.version)
+    };
+  } catch {
+    return {};
+  }
+}
+function inferEcosystemFromDirectory(dir) {
+  const normalized = dir.replaceAll("\\", "/").toLowerCase().replace(/\/$/, "");
+  if (normalized.endsWith("/.claude/skills")) return "claude-skill";
+  if (normalized.endsWith("/.openclaw/skills") || normalized.endsWith("/.clawdbot/skills") || normalized.endsWith("/.moltbot/skills")) {
+    return "clawhub";
+  }
+  return void 0;
+}
+async function detectSkillMetadata(skillPath, fallbackName, ecosystem) {
+  const [skill, pkg] = await Promise.all([
+    readSkillFrontmatter(skillPath),
+    readPackageMetadata(skillPath)
+  ]);
+  return {
+    path: skillPath,
+    name: skill.name ?? pkg.name ?? fallbackName,
+    version: skill.version ?? pkg.version,
+    ecosystem
+  };
+}
+
+// src/typosquat.ts
+function levenshtein(a, b, max) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return Infinity;
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n <= max ? n : Infinity;
+  if (n === 0) return m <= max ? m : Infinity;
+  let prev = new Array(n + 1);
+  let curr = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > max) return Infinity;
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n] <= max ? prev[n] : Infinity;
+}
+function maxDistanceForLength(length) {
+  if (length < 5) return 0;
+  if (length <= 7) return 1;
+  return 2;
+}
+function findNearMatches(candidate, knownNames) {
+  const c = candidate.toLowerCase();
+  const results = [];
+  for (const known of knownNames) {
+    const k = known.toLowerCase();
+    if (k === c) continue;
+    const max = maxDistanceForLength(Math.max(k.length, c.length));
+    if (max === 0) continue;
+    const d = levenshtein(c, k, max);
+    if (d !== Infinity && d >= 1 && d <= max) {
+      results.push({ name: known, distance: d });
+    }
+  }
+  return results.sort((x, y) => x.distance - y.distance);
+}
+
+// src/scan.ts
+var KNOWN_SKILL_DIRS = [
+  ".claude/skills",
+  ".openclaw/skills",
+  ".clawdbot/skills",
+  ".moltbot/skills"
+];
+var DEFAULT_SCAN_CONCURRENCY = 4;
+var DEFAULT_METADATA_CONCURRENCY = 8;
+function defaultSkillDirs() {
+  return KNOWN_SKILL_DIRS.map((d) => join(homedir(), d));
+}
+async function listInstalledSkills(dirs, ecosystem, concurrency = DEFAULT_METADATA_CONCURRENCY) {
+  positiveInteger(concurrency, "metadata concurrency");
+  const found = [];
+  for (const dir of dirs) {
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
+      const inferredEcosystem = ecosystem ?? inferEcosystemFromDirectory(dir);
+      const skills = await mapConcurrent(
+        folders.map((name) => ({ path: join(dir, name), name })),
+        concurrency,
+        ({ path: path4, name }) => detectSkillMetadata(path4, name, inferredEcosystem)
+      );
+      found.push({ dir, names: skills.map((skill) => skill.name), skills });
+    } catch {
+    }
+  }
+  return found;
+}
+async function scanSkills(dirs, feed, options = {}) {
+  const concurrency = positiveInteger(
+    options.concurrency ?? DEFAULT_SCAN_CONCURRENCY,
+    "scan concurrency"
+  );
+  const installed = await listInstalledSkills(
+    dirs,
+    options.ecosystem,
+    options.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY
+  );
+  const knownNames = collectKnownNames(feed);
+  const artifactIndex = buildArtifactIndex(feed);
+  const advisoryMap = /* @__PURE__ */ new Map();
+  for (const adv of feed.advisories) {
+    advisoryMap.set(adv.id, adv);
+  }
+  const skills = installed.flatMap((group) => group.skills);
+  const artifactResults = await mapConcurrent(skills, concurrency, async (skill) => {
+    const { name, version: version2, ecosystem } = skill;
+    const skillPath = skill.path;
+    const matches2 = [];
+    const warnings2 = [];
+    let matchedInSkill = false;
+    const matchedAdvisoryIds = /* @__PURE__ */ new Set();
+    const nameHits = matchNames(feed, [name], {
+      index: artifactIndex,
+      ecosystem,
+      version: version2
+    });
+    for (const nh of nameHits) {
+      matchedInSkill = true;
+      matchedAdvisoryIds.add(nh.advisory.id);
+      matches2.push({
+        query: name,
+        advisory: nh.advisory,
+        artifactNames: nh.artifactNames,
+        artifactEcosystems: nh.artifactEcosystems,
+        version: version2,
+        matchedBy: "name"
+      });
+    }
+    const hashResult = await hashSkillDirDetailed(skillPath, options.hash);
+    const hashedFiles = hashResult.files;
+    const hashHits = matchHashes(
+      feed,
+      hashedFiles.map((h) => h.sha256)
+    );
+    for (const hh of hashHits) {
+      const matchingFile = hashedFiles.find((hf) => hf.sha256 === hh.sha256);
+      for (const advId of hh.advisoryIds) {
+        if (!matchedAdvisoryIds.has(advId)) {
+          matchedInSkill = true;
+          matchedAdvisoryIds.add(advId);
+          const adv = advisoryMap.get(advId);
+          if (adv) {
+            matches2.push({
+              query: name,
+              advisory: adv,
+              artifactNames: adv.artifacts.map((a) => a.name),
+              artifactEcosystems: [...new Set(adv.artifacts.map((a) => a.ecosystem))],
+              version: version2,
+              matchedBy: "sha256",
+              file: matchingFile?.file,
+              sha256: hh.sha256
+            });
+          }
+        }
+      }
+    }
+    if (!matchedInSkill) {
+      const near = findNearMatches(name, knownNames);
+      for (const nm of near) {
+        warnings2.push({
+          name,
+          similarTo: nm.name,
+          distance: nm.distance
+        });
+      }
+    }
+    const artifact = {
+      path: skillPath,
+      name,
+      version: version2,
+      ecosystem,
+      sha256: artifactDigest(hashedFiles),
+      files: hashedFiles.length,
+      incomplete: hashResult.stats.budgetExhausted
+    };
+    return { matches: matches2, warnings: warnings2, artifact, hashStats: hashResult.stats };
+  });
+  const matches = artifactResults.flatMap((result) => result.matches);
+  const warnings = artifactResults.flatMap((result) => result.warnings);
+  const artifacts = artifactResults.map((result) => result.artifact);
+  const stats = aggregateHashStats(artifactResults.map((result) => result.hashStats));
+  return { installed, scannedCount: skills.length, matches, warnings, artifacts, stats };
+}
+function aggregateHashStats(perArtifact) {
+  const stats = {
+    discoveredFiles: 0,
+    hashedFiles: 0,
+    hashedBytes: 0,
+    skippedLargeFiles: 0,
+    skippedBudgetFiles: 0,
+    skippedSymlinks: 0,
+    skippedExcludedDirectories: 0,
+    unreadableEntries: 0,
+    budgetExhausted: false,
+    artifactsWithExhaustedBudgets: 0
+  };
+  for (const hashStats of perArtifact) {
+    stats.discoveredFiles += hashStats.discoveredFiles;
+    stats.hashedFiles += hashStats.hashedFiles;
+    stats.hashedBytes += hashStats.hashedBytes;
+    stats.skippedLargeFiles += hashStats.skippedLargeFiles;
+    stats.skippedBudgetFiles += hashStats.skippedBudgetFiles;
+    stats.skippedSymlinks += hashStats.skippedSymlinks;
+    stats.skippedExcludedDirectories += hashStats.skippedExcludedDirectories;
+    stats.unreadableEntries += hashStats.unreadableEntries;
+    if (hashStats.budgetExhausted) {
+      stats.budgetExhausted = true;
+      stats.artifactsWithExhaustedBudgets++;
+    }
+  }
+  return stats;
+}
+async function observeArtifacts(dirs, options = {}) {
+  const concurrency = positiveInteger(
+    options.concurrency ?? DEFAULT_SCAN_CONCURRENCY,
+    "scan concurrency"
+  );
+  const installed = await listInstalledSkills(
+    dirs,
+    options.ecosystem,
+    options.metadataConcurrency ?? DEFAULT_METADATA_CONCURRENCY
+  );
+  const skills = installed.flatMap((group) => group.skills);
+  const observed = await mapConcurrent(skills, concurrency, async (skill) => {
+    const hashResult = await hashSkillDirDetailed(skill.path, options.hash);
+    const artifact = {
+      path: skill.path,
+      name: skill.name,
+      version: skill.version,
+      ecosystem: skill.ecosystem,
+      sha256: artifactDigest(hashResult.files),
+      files: hashResult.files.length,
+      incomplete: hashResult.stats.budgetExhausted
+    };
+    return { artifact, hashStats: hashResult.stats };
+  });
+  return {
+    installed,
+    artifacts: observed.map((entry) => entry.artifact),
+    stats: aggregateHashStats(observed.map((entry) => entry.hashStats))
+  };
+}
+
 // src/cli.ts
 var VERSION = createRequire(import.meta.url)("../package.json").version;
 var HELP = `skill-advisories ${VERSION} \u2014 open advisory database for AI agent skills
@@ -5698,6 +6010,9 @@ Usage:
   skill-advisories check --sha256 <hash...>  Check SHA-256 file hashes against the advisory feed
   skill-advisories scan [dir...]     Scan installed skill directories (defaults to known locations)
   skill-advisories verify [dir]       Verify a published feed directory against its own checksums and history (default: feed)
+  skill-advisories lock [dir...]      Record the artifacts installed in these directories as approved
+  skill-advisories lock --check       Compare installed artifacts against the lockfile without writing
+  skill-advisories rollback [dir...]  Report the newest feed copy the published history proves good (default: feed)
 
 Options:
   --format <format> Output format: human, json, or sarif (default: human)
@@ -5719,11 +6034,17 @@ Options:
   --allow-incomplete Continue when files exceed budgets or cannot be read
   --max-feed-age <hours> Warn when the feed is older than this (default: 48);
                    exit code 2 instead of a warning under --strict
+  --check          For lock: report drift against the lockfile without writing it
+  --lockfile <path> Path to the artifact lockfile (default: skill-advisories.lock.json)
+  --policy <path>  Policy file deciding whether lock drift fails (default: built-in defaults)
+  --history <path> Published feed history a rollback candidate is judged against (default: feed/history.json)
   --help, -h       Show this help
   --version, -v    Show version
 
 Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage, feed, or incomplete-evidence error
-For verify: 0 = the directory matches its own evidence, 1 = it does not, 2 = the check could not run`;
+For verify: 0 = the directory matches its own evidence, 1 = it does not, 2 = the check could not run
+For lock --check: 0 = installed artifacts match the lockfile, 1 = drift the policy rejects, 2 = the check could not run
+For rollback: 0 = a recovery point was selected, 1 = no candidate is provably good, 2 = the selection could not run`;
 function fail(message) {
   console.error(import_picocolors2.default.red(`error: ${message}`));
   process.exit(2);
@@ -5747,6 +6068,10 @@ function parseArgs(argv) {
   const excludeDirectories = [];
   let allowIncomplete = false;
   let maxFeedAgeHours;
+  let check = false;
+  let lockfile;
+  let policy;
+  let history;
   const VALID_FORMATS = ["human", "json", "sarif"];
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
   let i = 0;
@@ -5822,6 +6147,23 @@ function parseArgs(argv) {
       allowIncomplete = true;
     } else if (arg === "--max-feed-age") {
       maxFeedAgeHours = readInteger(arg);
+    } else if (arg === "--check") {
+      check = true;
+    } else if (arg === "--lockfile") {
+      i++;
+      const value = argv[i];
+      if (!value || value.trim() === "") fail("--lockfile requires a path");
+      lockfile = value;
+    } else if (arg === "--policy") {
+      i++;
+      const value = argv[i];
+      if (!value || value.trim() === "") fail("--policy requires a path");
+      policy = value;
+    } else if (arg === "--history") {
+      i++;
+      const value = argv[i];
+      if (!value || value.trim() === "") fail("--history requires a path");
+      history = value;
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP);
       process.exit(0);
@@ -5857,7 +6199,11 @@ function parseArgs(argv) {
     maxTotalBytes,
     excludeDirectories,
     allowIncomplete,
-    maxFeedAgeHours
+    maxFeedAgeHours,
+    check,
+    lockfile,
+    policy,
+    history
   };
 }
 async function loadFeedOrFail(source, options) {
@@ -6136,6 +6482,181 @@ if (args.command === "check") {
   }
   const feedNotCurrent = result.freshness.status !== "fresh";
   process.exitCode = feedNotCurrent && args.strict ? 2 : result.problems.length > 0 ? 1 : 0;
+} else if (args.command === "lock") {
+  if (args.sha256) fail("--sha256 is only supported by the check command");
+  if (args.version) fail("--version is only supported by the check command");
+  if (args.failOn) fail("--fail-on decides about advisories, and lock reads no feed");
+  if (args.maxFeedAgeHours !== void 0) fail("--max-feed-age is not meaningful without a feed");
+  if (args.offline || args.refresh) fail("lock reads local directories and never fetches a feed");
+  if (args.format === "sarif") {
+    fail("lock reports on approved identities, not on findings, so it has no SARIF form");
+  }
+  if (args.allowIncomplete) fail("lock cannot approve or compare a partially hashed artifact");
+  const lockfile = args.lockfile ?? LOCK_FILE_NAME;
+  const policy = args.policy ? await loadPolicy(args.policy).catch(
+    (error) => fail(error instanceof Error ? error.message : String(error))
+  ) : parsePolicy({ schemaVersion: "1" });
+  const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs();
+  const observation = await observeArtifacts(dirs, {
+    ecosystem: args.ecosystem,
+    concurrency: args.scanConcurrency,
+    hash: {
+      concurrency: args.hashConcurrency,
+      maxFileBytes: args.maxFileBytes,
+      maxFiles: args.maxFiles,
+      maxTotalBytes: args.maxTotalBytes,
+      excludeDirectories: args.excludeDirectories
+    }
+  });
+  if (args.format === "human") {
+    for (const d of observation.installed) {
+      console.log(import_picocolors2.default.dim(`reading ${d.dir} (${d.names.length} skills)`));
+    }
+    if (observation.installed.length === 0) {
+      console.log(import_picocolors2.default.yellow("no skill directories found"));
+    }
+  }
+  const existing = await readFile6(lockfile, "utf8").catch((error) => {
+    if (error.code === "ENOENT") return void 0;
+    return fail(`cannot read ${lockfile}: ${error.message}`);
+  });
+  let previous;
+  if (existing !== void 0) {
+    try {
+      previous = parseArtifactLock(JSON.parse(existing));
+    } catch (error) {
+      fail(`invalid lockfile ${lockfile}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  if (args.check) {
+    if (!previous) fail(`cannot check against ${lockfile}: the lockfile does not exist`);
+    const drift = diffLock(previous, observation.artifacts);
+    const decision = evaluateLockDrift(drift, policy);
+    const rejected = decision.decision === "block" || decision.decision === "review" && args.strict;
+    if (args.format === "json") {
+      console.log(
+        JSON.stringify(
+          {
+            schemaVersion: "1",
+            lockfile,
+            decision: decision.decision,
+            reasons: decision.reasons,
+            drift,
+            stats: observation.stats
+          },
+          null,
+          2
+        )
+      );
+    } else if (decision.reasons.length === 0) {
+      console.log(
+        import_picocolors2.default.green(
+          `\u2705 ${lockfile} matches the artifacts installed \u2014 ${drift.matched.length} approved`
+        )
+      );
+      if (drift.missing.length > 0) {
+        console.log(import_picocolors2.default.dim(`   ${drift.missing.length} approved artifact(s) are not installed`));
+      }
+    } else {
+      const colour = rejected ? import_picocolors2.default.red : import_picocolors2.default.yellow;
+      const mark = rejected ? "\u274C" : "\u26A0";
+      console.log(colour(`${mark} ${lockfile} \u2014 ${decision.reasons.length} problem(s):`));
+      for (const reason of decision.reasons) {
+        console.log(`  ${reason}`);
+      }
+    }
+    process.exitCode = rejected ? 1 : 0;
+  } else {
+    let lock;
+    try {
+      lock = buildLock(observation.artifacts, (/* @__PURE__ */ new Date()).toISOString(), previous);
+    } catch (error) {
+      fail(error instanceof Error ? error.message : String(error));
+    }
+    const serialised = `${JSON.stringify(lock, null, 2)}
+`;
+    const changed = serialised !== existing;
+    if (changed) await writeFile(lockfile, serialised, "utf8");
+    if (args.format === "json") {
+      console.log(
+        JSON.stringify(
+          {
+            schemaVersion: "1",
+            lockfile,
+            written: changed,
+            generated: lock.generated,
+            artifacts: lock.artifacts.length,
+            stats: observation.stats
+          },
+          null,
+          2
+        )
+      );
+    } else if (changed) {
+      console.log(
+        import_picocolors2.default.green(`\u2705 wrote ${lockfile} \u2014 ${lock.artifacts.length} artifact(s) approved`)
+      );
+    } else {
+      console.log(
+        import_picocolors2.default.dim(`${lockfile} already approves these ${lock.artifacts.length} artifact(s)`)
+      );
+    }
+  }
+} else if (args.command === "rollback") {
+  if (args.scanConcurrency !== void 0 || args.hashConcurrency !== void 0 || args.maxFileBytes !== void 0 || args.maxFiles !== void 0 || args.maxTotalBytes !== void 0 || args.excludeDirectories.length > 0 || args.allowIncomplete) {
+    fail("scan resource options are only supported by the scan command");
+  }
+  if (args.sha256) fail("--sha256 is only supported by the check command");
+  if (args.ecosystem) fail("--ecosystem is only supported by the check and scan commands");
+  if (args.version) fail("--version is only supported by the check command");
+  if (args.failOn) fail("--fail-on decides about advisories, and rollback reads no feed");
+  if (args.maxFeedAgeHours !== void 0) {
+    fail("rollback judges copies by the published history, not by their age");
+  }
+  if (args.offline || args.refresh) {
+    fail("rollback reads local directories and never fetches a feed");
+  }
+  if (args.format === "sarif") {
+    fail("rollback reports on feed copies, not on artifacts, so it has no SARIF form");
+  }
+  const dirs = args.positionals.length > 0 ? args.positionals : ["feed"];
+  let result;
+  try {
+    result = await selectRecoveryPoint(args.history ?? "feed/history.json", dirs);
+  } catch (error) {
+    if (error instanceof VerifyUnavailableError) fail(error.message);
+    throw error;
+  }
+  if (args.format === "json") {
+    console.log(JSON.stringify({ schemaVersion: "1", ...result }, null, 2));
+  } else {
+    for (const problem of result.problems) {
+      console.error(import_picocolors2.default.red(`\u274C ${problem}`));
+    }
+    for (const candidate of result.candidates) {
+      if (candidate === result.selected) continue;
+      const reason = candidate.problems[0] ?? "not selected";
+      console.log(import_picocolors2.default.dim(`   ${candidate.dir} \u2014 ${reason}`));
+    }
+    if (result.selected) {
+      console.log(
+        import_picocolors2.default.green(
+          `\u2705 ${result.selected.dir} \u2014 published ${result.selected.generated}, ${result.selected.advisoryCount} advisories`
+        )
+      );
+      console.log(import_picocolors2.default.dim(`   cursor ${result.selected.cursor}`));
+      console.log(
+        import_picocolors2.default.dim("   recover with the procedure in docs/operations/rollback.md; nothing was changed")
+      );
+    } else {
+      console.log(
+        import_picocolors2.default.red(
+          `\u274C no candidate is provably good \u2014 ${result.candidates.length} examined against ${result.history}`
+        )
+      );
+    }
+  }
+  process.exitCode = result.selected ? 0 : 1;
 } else {
   fail(`unknown command "${args.command}"`);
 }
