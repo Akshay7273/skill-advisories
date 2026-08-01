@@ -4903,7 +4903,19 @@ var ArtifactLockSchema = object({
 }).strict();
 var LOCK_FILE_NAME = "skill-advisories.lock.json";
 function parseArtifactLock(input) {
-  return ArtifactLockSchema.parse(input);
+  const lock = ArtifactLockSchema.parse(input);
+  const digests = /* @__PURE__ */ new Map();
+  for (const artifact of lock.artifacts) {
+    const key = lockKey(artifact);
+    const seen = digests.get(key);
+    if (seen !== void 0 && seen !== artifact.sha256) {
+      throw new Error(
+        `lockfile approves ${key} twice with different digests (${seen} and ${artifact.sha256}), so it does not say which artifact is approved`
+      );
+    }
+    digests.set(key, artifact.sha256);
+  }
+  return lock;
 }
 function lockKey(artifact) {
   return artifact.ecosystem ? `${artifact.ecosystem}:${artifact.name}` : artifact.name;

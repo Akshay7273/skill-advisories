@@ -36,8 +36,38 @@ export type ArtifactLock = z.infer<typeof ArtifactLockSchema>
 
 export const LOCK_FILE_NAME = "skill-advisories.lock.json"
 
+/**
+ * Read a lockfile, refusing one that approves a single identity twice with two
+ * different digests.
+ *
+ * `buildLock` never writes such a file -- it raises rather than approve one of
+ * two artifacts sharing an identity, silently. Nothing stopped one arriving by
+ * hand, by a botched merge, or from another tool, and the two readers here
+ * resolve it differently: `diffLock` builds a Map, so the last entry wins,
+ * while `lockStatus` scans with `find`, so the first does. One file could
+ * therefore tell `lock --check` that an artifact had drifted while telling an
+ * MCP client the same digest was approved.
+ *
+ * A file that approves two things under one name has not said which one it
+ * approves, so it is rejected rather than resolved by position. That is the
+ * same fail-closed rule the CLI already applies to a lockfile that does not
+ * parse: a check that could not run, not a check that passed.
+ */
 export function parseArtifactLock(input: unknown): ArtifactLock {
-  return ArtifactLockSchema.parse(input)
+  const lock = ArtifactLockSchema.parse(input)
+  const digests = new Map<string, string>()
+  for (const artifact of lock.artifacts) {
+    const key = lockKey(artifact)
+    const seen = digests.get(key)
+    if (seen !== undefined && seen !== artifact.sha256) {
+      throw new Error(
+        `lockfile approves ${key} twice with different digests (${seen} and ${artifact.sha256}), ` +
+          "so it does not say which artifact is approved",
+      )
+    }
+    digests.set(key, artifact.sha256)
+  }
+  return lock
 }
 
 /**
