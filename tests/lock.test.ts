@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import Ajv2020 from "ajv/dist/2020.js"
 import addFormats from "ajv-formats"
 import { describe, expect, it } from "vitest"
-import { buildLock, diffLock, lockKey, parseArtifactLock } from "../src/lock.js"
+import { buildLock, diffLock, lockKey, lockStatus, parseArtifactLock } from "../src/lock.js"
 import type { ScannedArtifact } from "../src/scan.js"
 
 const digest = (value: string) => value.repeat(64).slice(0, 64)
@@ -163,5 +163,67 @@ describe("lock drift", () => {
     expect(drift.matched).toEqual(["claude-skill:beta"])
     expect(drift.changed).toEqual([])
     expect(drift.missing).toEqual([])
+  })
+})
+
+describe("lock status", () => {
+  const lock = buildLock(
+    [observed("alpha", digest("a"), { version: "1.2.0" }), observed("beta", digest("b"))],
+    NOW,
+  )
+
+  it("approves an artifact whose digest is the one recorded", () => {
+    expect(lockStatus(lock, { name: "alpha", ecosystem: "claude-skill", sha256: digest("a") })).toEqual({
+      key: "claude-skill:alpha",
+      status: "approved",
+      approved: digest("a"),
+      version: "1.2.0",
+    })
+  })
+
+  it("reports a locked identity carrying different bytes as changed", () => {
+    const status = lockStatus(lock, {
+      name: "alpha",
+      ecosystem: "claude-skill",
+      sha256: digest("z"),
+    })
+    expect(status.status).toBe("changed")
+    expect(status.approved).toBe(digest("a"))
+  })
+
+  it("does not call a name alone approved", () => {
+    // The whole reason the lockfile stores digests is that one name can carry
+    // different bytes, so answering approved here would hand back the
+    // reassurance without having done the check.
+    expect(lockStatus(lock, { name: "beta", ecosystem: "claude-skill" })).toEqual({
+      key: "claude-skill:beta",
+      status: "unverified",
+      approved: digest("b"),
+    })
+  })
+
+  it("reports an identity the lockfile never approved", () => {
+    expect(lockStatus(lock, { name: "gamma", ecosystem: "claude-skill", sha256: digest("c") })).toEqual({
+      key: "claude-skill:gamma",
+      status: "unapproved",
+    })
+  })
+
+  it("distinguishes the same name in different ecosystems", () => {
+    // Approving a Claude skill called alpha says nothing about an npm package
+    // that happens to share the name.
+    expect(lockStatus(lock, { name: "alpha", ecosystem: "npm", sha256: digest("a") }).status).toBe(
+      "unapproved",
+    )
+    expect(lockStatus(lock, { name: "alpha", sha256: digest("a") }).status).toBe("unapproved")
+  })
+
+  it("compares digests without regard to case", () => {
+    const status = lockStatus(lock, {
+      name: "alpha",
+      ecosystem: "claude-skill",
+      sha256: digest("a").toUpperCase(),
+    })
+    expect(status.status).toBe("approved")
   })
 })
