@@ -87,7 +87,7 @@
     "esbuild": "^0.28.1",
     "tsx": "^4.19.0",
     "typescript": "^7.0.2",
-    "vitest": "^3.0.0"
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
     "esbuild@0.28.1": true
