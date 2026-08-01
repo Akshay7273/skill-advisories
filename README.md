@@ -169,6 +169,12 @@ Upload SARIF results to GitHub Code Scanning:
 
 Inputs: `names` (space-separated skill names), `scan-dir` (directory to scan), `ecosystem` (restrict name checks), `version` (installed version for name checks), `feed` (alternate feed URL or path), `format` (output format), `sarif-file` (SARIF output path), `fail-on` (minimum severity threshold).
 
+`@v1` is a moving pointer to the newest stable release, and it names the input
+contract above rather than the package version -- the inputs have been stable
+since v1 while the package is still 0.x. Pin a specific release such as
+`@v0.8.0` if you would rather adopt changes deliberately; prereleases never move
+the pointer.
+
 ## Data integrity
 
 1. Every advisory cites at least one published public reference.
