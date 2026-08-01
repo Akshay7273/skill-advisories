@@ -54,10 +54,11 @@ Make the feed independently consumable and resistant to tampering.
 
 - [x] OSV-compatible export and documented field mapping
 - [x] Advisory aliases for CVE, GHSA, and vendor identifiers
-- [ ] Structured evidence provenance and source archival metadata
+- [x] Structured evidence provenance and source archival metadata
 - [x] Keyless Sigstore attestations for feed releases
-- [ ] Feed freshness metadata and last-known-good rollback support
-- [ ] Automated checks for broken references and duplicate artifacts
+- [x] Feed freshness metadata and a documented staleness policy
+- [ ] Last-known-good rollback verified by tooling rather than by hand
+- [x] Automated checks for broken references and duplicate artifacts
 
 **Exit criteria:** consumers can verify feed provenance without trusting the
 download channel, and security tools can ingest an OSV-compatible export.
