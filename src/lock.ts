@@ -191,3 +191,55 @@ export function diffLock(lock: ArtifactLock, observed: ScannedArtifact[]): LockD
   }
   return drift
 }
+
+export type LockStatus = {
+  /** Identity the lookup was made under. */
+  key: string
+  /**
+   * `approved` -- the identity is locked and the supplied digest matches it.
+   * `changed` -- locked, but the supplied digest is not the approved one.
+   * `unapproved` -- no lock entry exists for this identity.
+   * `unverified` -- locked, but no digest was supplied to compare against, so
+   * only the name has been checked.
+   */
+  status: "approved" | "changed" | "unapproved" | "unverified"
+  /** Digest the lockfile approves, when there is an entry at all. */
+  approved?: string
+  /** Version the lockfile recorded, informational. */
+  version?: string
+}
+
+/**
+ * Answer whether a lockfile approves an artifact, without touching the disk.
+ *
+ * This is the question a caller can ask before installing something, where the
+ * scan-based comparison in `diffLock` cannot help because the artifact is not
+ * installed yet. It therefore judges the identity and digest it is handed
+ * rather than anything it reads.
+ *
+ * A name that is locked but supplied without a digest reports `unverified`
+ * rather than `approved`. Names are not identities -- the entire reason the
+ * lockfile stores digests is that the same name can carry different bytes --
+ * and answering `approved` on a name alone would hand back the reassurance
+ * without having done the check.
+ */
+export function lockStatus(
+  lock: ArtifactLock,
+  query: { name: string; ecosystem?: string; sha256?: string },
+): LockStatus {
+  const key = lockKey(query)
+  const approved = lock.artifacts.find((artifact) => lockKey(artifact) === key)
+  if (!approved) return { key, status: "unapproved" }
+
+  const status = !query.sha256
+    ? "unverified"
+    : query.sha256.toLowerCase() === approved.sha256
+      ? "approved"
+      : "changed"
+  return {
+    key,
+    status,
+    approved: approved.sha256,
+    ...(approved.version ? { version: approved.version } : {}),
+  }
+}
