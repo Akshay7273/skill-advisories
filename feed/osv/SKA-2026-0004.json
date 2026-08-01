@@ -3,7 +3,7 @@
   "summary": "ClawHub user Aslaep123 published malicious crypto-trading skills (base-agent, bybit-agent, polymarket-trading-bot) targeting credential theft from traders.",
   "details": "Snyk's ToxicSkills audit identified multiple malicious skills by Aslaep123 targeting crypto/trading use cases, high-value targets for credential theft; base-agent and bybit-agent remained publicly available on clawhub.ai at publication. Antiy CERT's incident timeline records polymarket-trading-bot v1.0.1 by aslaep123 as the first malicious skill of the ClawHavoc wave, with base-agent v1.0.0 and bybit-agent v1.0.0 following in the subsequent days.",
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-31T21:10:00Z",
   "affected": [
     {
       "package": {
@@ -56,6 +56,20 @@
     "credits": [
       "Snyk Security Labs",
       "Antiy CERT"
+    ],
+    "reference_provenance": [
+      {
+        "url": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+        "archive_url": "https://web.archive.org/web/20260723003213/https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+        "retrieved": "2026-07-31T20:36:04Z",
+        "content_sha256": "163ee24b5171d23ffa97fc5bffed07139f768083180668cc65b27b341f8c5779"
+      },
+      {
+        "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+        "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+        "retrieved": "2026-07-31T20:35:47Z",
+        "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
+      }
     ],
     "source": "https://github.com/Akshay7273/skill-advisories"
   }

@@ -3,7 +3,7 @@
   "summary": "money-radar performed runtime agentic affiliate injection, routing the agent's financial recommendations through attacker-controlled affiliate links.",
   "details": "Unit42 identified this as a novel agentic threat: the skill weaponized the agent's advisory authority, routing all financial recommendations through affiliate links from a known-malicious domain, with the publisher retaining dynamic control over pushed products after installation. Part of a campaign targeting banking and crypto exchange workflows. Reported to ClawHub and removed.",
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-31T21:10:00Z",
   "affected": [
     {
       "package": {
@@ -33,6 +33,14 @@
     ],
     "credits": [
       "Unit42, Palo Alto Networks"
+    ],
+    "reference_provenance": [
+      {
+        "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+        "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+        "retrieved": "2026-07-31T20:36:11Z",
+        "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
+      }
     ],
     "source": "https://github.com/Akshay7273/skill-advisories"
   }

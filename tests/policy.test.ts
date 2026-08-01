@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { DEFAULT_MAX_FEED_AGE_HOURS } from "../src/freshness.js"
 import type { ArtifactAssessment } from "../src/intelligence.js"
 import { evaluatePolicy, loadPolicy, parsePolicy } from "../src/policy.js"
 
@@ -25,8 +26,16 @@ describe("advisory policy", () => {
       deniedEcosystems: [],
       requireHash: false,
       warnings: "review",
+      maxFeedAgeHours: DEFAULT_MAX_FEED_AGE_HOURS,
     })
     expect(() => parsePolicy({ schemaVersion: "1", typo: true })).toThrow()
+  })
+
+  it("accepts a repo-specific feed age limit and rejects unusable ones", () => {
+    expect(parsePolicy({ schemaVersion: "1", maxFeedAgeHours: 6 }).maxFeedAgeHours).toBe(6)
+    expect(() => parsePolicy({ schemaVersion: "1", maxFeedAgeHours: 0 })).toThrow()
+    expect(() => parsePolicy({ schemaVersion: "1", maxFeedAgeHours: -1 })).toThrow()
+    expect(() => parsePolicy({ schemaVersion: "1", maxFeedAgeHours: 1.5 })).toThrow()
   })
 
   it("allows an artifact with no policy violation", () => {

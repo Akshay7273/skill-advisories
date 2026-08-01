@@ -36,6 +36,12 @@ forward compatibility.
     "unreadableEntries": 0,
     "budgetExhausted": true,
     "artifactsWithExhaustedBudgets": 1
+  },
+  "feedAge": {
+    "status": "fresh",
+    "ageHours": 3.2,
+    "generated": "2026-07-31T22:41:07.913Z",
+    "maxAgeHours": 48
   }
 }
 ```
@@ -49,13 +55,27 @@ or skipped. Oversized, over-budget, or unreadable files make the scan incomplete
 and produce exit code `2` by default, even when no advisory matches. Callers may
 use `--allow-incomplete` only when partial coverage is an explicit policy choice.
 
+`feedAge` reports how current the feed backing the result is. `status` is
+`fresh`, `stale`, or `unknown`; `ageHours` and `generated` are absent for
+`unknown`, because a feed with no parseable timestamp has not been shown to be
+old. A non-`fresh` feed warns by default and produces exit code `2` under
+`--strict`. This field was added after version 1 was published: it is additive,
+`schemaVersion` remains `"1"`, and consumers that ignore it are unaffected. See
+[feed freshness](feed-freshness.md).
+
 ## Exit codes
 
 - `0`: no finding met the configured failure threshold.
 - `1`: at least one finding met the threshold, or a typosquat warning was found
   with `--strict`.
-- `2`: invalid arguments, an unreadable feed, an incomplete filesystem scan,
-  or another operational error.
+- `2`: invalid arguments, an unreadable feed, an incomplete filesystem scan, a
+  non-`fresh` feed under `--strict`, or another operational error.
+
+The `verify` subcommand reports on a feed directory rather than on artifacts, so
+its codes carry a different meaning: `0` the directory matches its own evidence,
+`1` it does not, `2` the check could not run at all. It emits its own JSON shape
+under the same `schemaVersion`, described in
+[feed freshness](feed-freshness.md#verification).
 
 JSON is written to stdout. Diagnostics, cache warnings, and human-readable
 errors are written to stderr.

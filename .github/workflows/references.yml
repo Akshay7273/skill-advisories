@@ -1,0 +1,38 @@
+name: Reference reachability
+
+# Cited evidence rots on someone else's schedule, not ours, so this runs on a
+# timer rather than per pull request. A permanent 404/410 fails the run and
+# raises the usual workflow-failure notification; everything else (timeouts,
+# 5xx, a CDN blocking the runner IP) is recorded in the artifact without
+# failing, because none of it is evidence that a report is gone.
+on:
+  schedule:
+    - cron: "41 5 * * 2"
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  reachability:
+    name: Probe cited references
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Check reference reachability
+        run: npm run references:check -- --fail-on-gone
+      - name: Upload reference report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reference-report
+          path: site/references.json
+          retention-days: 90

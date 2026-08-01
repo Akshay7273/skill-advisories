@@ -9,7 +9,10 @@ non-destructive, and idempotent:
 - `search_advisories` filters the public feed by text, ecosystem, and severity.
 
 Every negative result includes an explicit warning that absence from the feed
-is not proof of safety.
+is not proof of safety. `check_artifact` also returns a `feedAge` object
+(`status`, `ageHours`, `generated`, `maxAgeHours`) so an agent can tell a
+confident answer from one backed by evidence that stopped updating days ago.
+A long-lived server evaluates this per call, not once at startup.
 
 ## Add it to Claude Code
 
@@ -35,8 +38,10 @@ commit it. The policy can:
 
 - block advisories at or above a severity threshold;
 - deny entire artifact ecosystems;
-- require a SHA-256 identity; and
-- allow, review, or block typosquat warnings.
+- require a SHA-256 identity;
+- allow, review, or block typosquat warnings; and
+- set `maxFeedAgeHours`, the age at which the repository stops treating the
+  feed as current (default 48).
 
 Unknown policy keys and invalid values are rejected. Editors can validate the
 file with [`schema/policy.schema.json`](../schema/policy.schema.json).

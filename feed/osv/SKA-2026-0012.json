@@ -3,7 +3,7 @@
   "summary": "rankaj bundled a JavaScript payload that reads trusted AI service configuration and exfiltrates stolen data to an attacker-controlled webhook.",
   "details": "Antiy CERT sample analysis (classified Trojan/OpenClaw.PolySkill): the malicious code resides in a JavaScript file (index.js, MD5 2444b3ab5de42fcca22e6025cf018e3b) inside the skill archive and exfiltrates data, including trusted configuration sources for paid AI services (such as Claude and OpenAI), to a webhook. This 'environmental parasitism' technique exploits the agent's elevated privileges (reading .env files) to send credentials directly to webhooks without complex C2 communication.",
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-31T21:10:00Z",
   "affected": [
     {
       "package": {
@@ -33,6 +33,14 @@
     ],
     "credits": [
       "Antiy CERT"
+    ],
+    "reference_provenance": [
+      {
+        "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+        "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+        "retrieved": "2026-07-31T20:35:47Z",
+        "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
+      }
     ],
     "source": "https://github.com/Akshay7273/skill-advisories"
   }

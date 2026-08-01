@@ -54,7 +54,22 @@
         "required": ["type", "url"],
         "properties": {
           "type": { "enum": ["REPORT", "ADVISORY", "ARTICLE", "WEB"] },
-          "url": { "type": "string", "format": "uri" }
+          "url": { "type": "string", "format": "uri" },
+          "archive_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Archived copy of url, for when the original rots."
+          },
+          "retrieved": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When url was read and any content hash was taken."
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "SHA-256 of the retrieved body, so later readers can detect edits."
+          }
         }
       }
     },

@@ -5,10 +5,24 @@ import type { Feed } from "../src/compile.js"
 import { buildFeed } from "../src/compile.js"
 import { loadAdvisories } from "../src/load.js"
 import { createAdvisoryMcpServer } from "../src/mcp.js"
+import { parsePolicy } from "../src/policy.js"
+import type { AdvisoryPolicy } from "../src/policy.js"
 
 let client: Client
 let server: ReturnType<typeof createAdvisoryMcpServer>
 let feed: Feed
+
+/** Connect a throwaway client to a server built over a caller-supplied feed. */
+async function connect(over: Feed, policy?: AdvisoryPolicy) {
+  const extra = createAdvisoryMcpServer(over, "test", policy)
+  const extraClient = new Client({ name: "skill-advisories-test", version: "1.0.0" })
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+  await Promise.all([extra.connect(serverTransport), extraClient.connect(clientTransport)])
+  return {
+    client: extraClient,
+    close: () => Promise.all([extraClient.close(), extra.close()]),
+  }
+}
 
 beforeEach(async () => {
   const loaded = await loadAdvisories("advisories")
@@ -44,6 +58,33 @@ describe("MCP server", () => {
       status: "known-risk",
       matches: [{ id: "SKA-2026-0008", matchedBy: "name" }],
     })
+  })
+
+  it("reports how current the feed is alongside every assessment", async () => {
+    const result = await client.callTool({
+      name: "check_artifact",
+      arguments: { name: "omnicogg", ecosystem: "clawhub" },
+    })
+    expect(result.structuredContent).toMatchObject({
+      feedAge: { status: "fresh", maxAgeHours: 48 },
+    })
+  })
+
+  it("marks the feed stale when it outlives the policy limit", async () => {
+    const stale = { ...feed, generated: new Date(Date.now() - 30 * 3_600_000).toISOString() }
+    const session = await connect(stale, parsePolicy({ schemaVersion: "1", maxFeedAgeHours: 6 }))
+    try {
+      const result = await session.client.callTool({
+        name: "check_artifact",
+        arguments: { name: "definitely-not-published", ecosystem: "npm" },
+      })
+      expect(result.structuredContent).toMatchObject({
+        status: "no-known-advisory",
+        feedAge: { status: "stale", maxAgeHours: 6 },
+      })
+    } finally {
+      await session.close()
+    }
   })
 
   it("retrieves advisories by identifier", async () => {

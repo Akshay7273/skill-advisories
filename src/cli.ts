@@ -2,6 +2,8 @@
 import { createRequire } from "node:module"
 import pc from "picocolors"
 import type { Feed } from "./compile.js"
+import { describeFreshness, evaluateFreshness } from "./freshness.js"
+import type { Freshness } from "./freshness.js"
 import { DEFAULT_FEED_URL, collectKnownNames, loadFeed, matchHashes, matchNames } from "./lookup.js"
 import { ECOSYSTEMS } from "./types.js"
 import type { Advisory, Ecosystem } from "./types.js"
@@ -10,6 +12,8 @@ import type { ScanMatch, ScanStats, ScanWarning } from "./scan.js"
 import { findNearMatches } from "./typosquat.js"
 import { buildSarif, meetsThreshold } from "./sarif.js"
 import type { SarifFinding } from "./sarif.js"
+import { VerifyUnavailableError, verifyFeedDirectory } from "./verify.js"
+import type { VerifyResult } from "./verify.js"
 
 const VERSION: string = createRequire(import.meta.url)("../package.json").version
 
@@ -19,6 +23,7 @@ Usage:
   skill-advisories check <name...>   Check skill names against the advisory feed
   skill-advisories check --sha256 <hash...>  Check SHA-256 file hashes against the advisory feed
   skill-advisories scan [dir...]     Scan installed skill directories (defaults to known locations)
+  skill-advisories verify [dir]       Verify a published feed directory against its own checksums and history (default: feed)
 
 Options:
   --format <format> Output format: human, json, or sarif (default: human)
@@ -38,10 +43,13 @@ Options:
   --max-total-bytes <n> Hash at most this many bytes per artifact (default: 268435456)
   --exclude-dir <name> Skip an exact directory basename; may be repeated
   --allow-incomplete Continue when files exceed budgets or cannot be read
+  --max-feed-age <hours> Warn when the feed is older than this (default: 48);
+                   exit code 2 instead of a warning under --strict
   --help, -h       Show this help
   --version, -v    Show version
 
-Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage or feed error`
+Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage, feed, or incomplete-evidence error
+For verify: 0 = the directory matches its own evidence, 1 = it does not, 2 = the check could not run`
 
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`))
@@ -67,6 +75,7 @@ type ParsedArgs = {
   maxTotalBytes?: number
   excludeDirectories: string[]
   allowIncomplete: boolean
+  maxFeedAgeHours?: number
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -87,6 +96,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let maxTotalBytes: number | undefined
   const excludeDirectories: string[] = []
   let allowIncomplete = false
+  let maxFeedAgeHours: number | undefined
 
   const VALID_FORMATS = ["human", "json", "sarif"]
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"]
@@ -163,6 +173,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       excludeDirectories.push(value)
     } else if (arg === "--allow-incomplete") {
       allowIncomplete = true
+    } else if (arg === "--max-feed-age") {
+      maxFeedAgeHours = readInteger(arg)
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP)
       process.exit(0)
@@ -200,6 +212,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     maxTotalBytes,
     excludeDirectories,
     allowIncomplete,
+    maxFeedAgeHours,
   }
 }
 
@@ -223,6 +236,7 @@ function report(
   failOn?: string,
   scanStats?: ScanStats,
   allowIncomplete = false,
+  freshness?: Freshness,
 ): void {
   if (format === "sarif") {
     const findings: SarifFinding[] = matches.map((m) => ({
@@ -263,12 +277,16 @@ function report(
             distance: w.distance,
           })),
           ...(scanStats ? { scan: scanStats } : {}),
+          ...(freshness ? { feedAge: freshness } : {}),
         },
         null,
         2,
       ),
     )
   } else {
+    if (freshness && freshness.status !== "fresh") {
+      console.error(pc.yellow(`\u26a0 ${describeFreshness(freshness)}`))
+    }
     if (
       scanStats &&
       (scanStats.skippedLargeFiles > 0 ||
@@ -326,7 +344,12 @@ function report(
     (scanStats.skippedLargeFiles > 0 ||
       scanStats.skippedBudgetFiles > 0 ||
       scanStats.unreadableEntries > 0)
-  process.exitCode = scanIncomplete && !allowIncomplete
+  // A stale feed is an operational fault, not an advisory finding: the data
+  // could not be shown to be current, so it joins the exit-2 family rather
+  // than reporting a match that was never made. Warn-only by default so an
+  // offline run does not start failing builds on its own.
+  const feedNotCurrent = freshness !== undefined && freshness.status !== "fresh"
+  process.exitCode = (scanIncomplete && !allowIncomplete) || (feedNotCurrent && strict)
     ? 2
     : triggerFailure || (strict && hasWarnings)
       ? 1
@@ -356,6 +379,7 @@ if (args.command === "check") {
   }
   if (args.positionals.length === 0) fail("check requires at least one skill name or hash")
   const feed = await loadFeedOrFail(args.feed, feedOptions)
+  const freshness = evaluateFreshness(feed, { maxAgeHours: args.maxFeedAgeHours })
 
   if (args.sha256) {
     if (args.ecosystem) fail("--ecosystem cannot be combined with --sha256")
@@ -385,7 +409,17 @@ if (args.command === "check") {
         }
       }
     }
-    report(args.positionals.length, matches, [], args.format, args.strict, args.failOn)
+    report(
+      args.positionals.length,
+      matches,
+      [],
+      args.format,
+      args.strict,
+      args.failOn,
+      undefined,
+      false,
+      freshness,
+    )
   } else {
     const nameHits = matchNames(feed, args.positionals, {
       ecosystem: args.ecosystem,
@@ -417,12 +451,23 @@ if (args.command === "check") {
       }
     }
 
-    report(args.positionals.length, matches, warnings, args.format, args.strict, args.failOn)
+    report(
+      args.positionals.length,
+      matches,
+      warnings,
+      args.format,
+      args.strict,
+      args.failOn,
+      undefined,
+      false,
+      freshness,
+    )
   }
 } else if (args.command === "scan") {
   if (args.version) fail("--version is only supported by the check command")
   const dirs = args.positionals.length > 0 ? args.positionals : defaultSkillDirs()
   const feed = await loadFeedOrFail(args.feed, feedOptions)
+  const freshness = evaluateFreshness(feed, { maxAgeHours: args.maxFeedAgeHours })
   const result = await scanSkills(dirs, feed, {
     ecosystem: args.ecosystem,
     concurrency: args.scanConcurrency,
@@ -453,7 +498,71 @@ if (args.command === "check") {
     args.failOn,
     result.stats,
     args.allowIncomplete,
+    freshness,
   )
+} else if (args.command === "verify") {
+  if (
+    args.scanConcurrency !== undefined ||
+    args.hashConcurrency !== undefined ||
+    args.maxFileBytes !== undefined ||
+    args.maxFiles !== undefined ||
+    args.maxTotalBytes !== undefined ||
+    args.excludeDirectories.length > 0 ||
+    args.allowIncomplete
+  ) {
+    fail("scan resource options are only supported by the scan command")
+  }
+  if (args.sha256) fail("--sha256 is only supported by the check command")
+  if (args.ecosystem) fail("--ecosystem is only supported by the check and scan commands")
+  if (args.version) fail("--version is only supported by the check command")
+  // verify reads a directory on disk, so the flags that decide where a feed
+  // comes from have nothing to act on.
+  if (args.offline || args.refresh) fail("verify reads a local directory and never fetches a feed")
+  if (args.format === "sarif") {
+    fail("verify reports on a feed directory, not on artifacts, so it has no SARIF form")
+  }
+  if (args.positionals.length > 1) fail("verify accepts at most one directory")
+
+  let result: VerifyResult
+  try {
+    result = await verifyFeedDirectory(args.positionals[0] ?? "feed", {
+      maxAgeHours: args.maxFeedAgeHours,
+    })
+  } catch (error) {
+    // The check could not run at all. That is the same class of fault as an
+    // unreachable feed, so it exits 2 rather than claiming a failed verification.
+    if (error instanceof VerifyUnavailableError) fail(error.message)
+    throw error
+  }
+
+  if (args.format === "json") {
+    console.log(JSON.stringify({ schemaVersion: "1", ...result }, null, 2))
+  } else {
+    if (result.freshness.status !== "fresh") {
+      console.error(pc.yellow(`\u26a0 ${describeFreshness(result.freshness)}`))
+    }
+    if (result.problems.length === 0) {
+      console.log(
+        pc.green(
+          `\u2705 ${result.dir} verified \u2014 ${result.advisoryCount} advisories, ${result.checkedFiles} file(s) checked`,
+        ),
+      )
+      console.log(pc.dim(`   digest ${result.digest}`))
+      console.log(pc.dim(`   cursor ${result.cursor}`))
+    } else {
+      console.log(
+        pc.red(
+          `\u274c ${result.dir} failed verification \u2014 ${result.problems.length} problem(s):`,
+        ),
+      )
+      for (const problem of result.problems) {
+        console.log(`  ${problem}`)
+      }
+    }
+  }
+
+  const feedNotCurrent = result.freshness.status !== "fresh"
+  process.exitCode = feedNotCurrent && args.strict ? 2 : result.problems.length > 0 ? 1 : 0
 } else {
   fail(`unknown command "${args.command}"`)
 }

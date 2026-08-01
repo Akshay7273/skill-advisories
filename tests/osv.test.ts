@@ -49,4 +49,46 @@ describe("OSV export", () => {
     } as Advisory
     expect(toOsv(wildcard).affected[0].versions).toBeUndefined()
   })
+
+  it("keeps reference entries to {type, url} and relocates provenance", () => {
+    const osv = toOsv({
+      ...advisory,
+      references: [
+        {
+          type: "REPORT",
+          url: "https://example.com/report",
+          archive_url: "https://web.archive.org/web/2026/https://example.com/report",
+          retrieved: "2026-07-01T00:00:00Z",
+          content_sha256: "c".repeat(64),
+        },
+      ],
+    })
+    expect(osv.references).toEqual([{ type: "REPORT", url: "https://example.com/report" }])
+    expect(osv.database_specific.reference_provenance).toEqual([
+      {
+        url: "https://example.com/report",
+        archive_url: "https://web.archive.org/web/2026/https://example.com/report",
+        retrieved: "2026-07-01T00:00:00Z",
+        content_sha256: "c".repeat(64),
+      },
+    ])
+  })
+
+  it("omits reference_provenance when no reference carries provenance", () => {
+    expect(toOsv(advisory).database_specific.reference_provenance).toBeUndefined()
+  })
+
+  it("records provenance only for references that have it", () => {
+    const osv = toOsv({
+      ...advisory,
+      references: [
+        { type: "WEB", url: "https://example.com/plain" },
+        { type: "REPORT", url: "https://example.com/dated", retrieved: "2026-07-01T00:00:00Z" },
+      ],
+    })
+    expect(osv.references).toHaveLength(2)
+    expect(osv.database_specific.reference_provenance).toEqual([
+      { url: "https://example.com/dated", retrieved: "2026-07-01T00:00:00Z" },
+    ])
+  })
 })

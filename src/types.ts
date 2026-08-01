@@ -28,6 +28,12 @@ export type Severity = "critical" | "high" | "medium" | "low"
 export type Reference = {
   type: "REPORT" | "ADVISORY" | "ARTICLE" | "WEB"
   url: string
+  /** Archived copy of url, for when the original rots. */
+  archive_url?: string
+  /** RFC 3339 timestamp at which url was read and any hash taken. */
+  retrieved?: string
+  /** SHA-256 of the retrieved body, so a later reader can detect edits. */
+  content_sha256?: string
 }
 
 export type Artifact = {

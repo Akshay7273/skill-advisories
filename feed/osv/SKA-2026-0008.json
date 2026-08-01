@@ -3,7 +3,7 @@
   "summary": "The omnicogg skill hid a malicious payload at the start of a README.md padded with 22 MB of filler to exceed scanner size limits and evade detection.",
   "details": "First disclosed by JFrog Security Research (March 2026) and analyzed by Unit42: the malicious payload appears at the start of the README.md, followed by 22 MB of padding characters that inflate the file beyond the size limits many content-analysis pipelines enforce, bypassing both ClawScan and VirusTotal. Reported to ClawHub and removed.",
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z",
+  "modified": "2026-07-31T21:10:00Z",
   "affected": [
     {
       "package": {
@@ -37,6 +37,20 @@
     "credits": [
       "JFrog Security Research",
       "Unit42, Palo Alto Networks"
+    ],
+    "reference_provenance": [
+      {
+        "url": "https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+        "archive_url": "https://web.archive.org/web/20260715053107/https://unit42.paloaltonetworks.com/openclaw-ai-supply-chain-risk/",
+        "retrieved": "2026-07-31T20:36:11Z",
+        "content_sha256": "4a67e2ee6425052413d9de1d73926d3fa2810de87095a2c13f70f0b548feda98"
+      },
+      {
+        "url": "https://research.jfrog.com/post/omnicogg-malicious-skill/",
+        "archive_url": "https://web.archive.org/web/20260412095311/https://research.jfrog.com/post/omnicogg-malicious-skill/",
+        "retrieved": "2026-07-31T20:36:16Z",
+        "content_sha256": "dee40056a329d9c0287b557c4905b1154102629e5e2e7b417073387ff8c992bd"
+      }
     ],
     "source": "https://github.com/Akshay7273/skill-advisories"
   }

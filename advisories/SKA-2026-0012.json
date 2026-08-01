@@ -10,9 +10,15 @@
     { "ecosystem": "clawhub", "name": "rankaj", "versions": ["1.0.0"] }
   ],
   "references": [
-    { "type": "REPORT", "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/" }
+    {
+      "type": "REPORT",
+      "url": "https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+      "archive_url": "https://web.archive.org/web/20260707095045/https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/",
+      "retrieved": "2026-07-31T20:35:47Z",
+      "content_sha256": "ef69ac74f832412c564b383a37254116143d7d54f1da1ee13c71926547a9d40c"
+    }
   ],
   "credits": ["Antiy CERT"],
   "published": "2026-07-22T00:00:00Z",
-  "modified": "2026-07-22T00:00:00Z"
+  "modified": "2026-07-31T21:10:00Z"
 }

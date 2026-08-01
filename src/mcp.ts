@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server"
 import * as z from "zod/v4"
 import type { Feed } from "./compile.js"
+import { evaluateFreshness } from "./freshness.js"
 import { assessArtifact, searchAdvisories } from "./intelligence.js"
 import { evaluatePolicy } from "./policy.js"
 import type { AdvisoryPolicy } from "./policy.js"
@@ -43,9 +44,15 @@ export function createAdvisoryMcpServer(
     },
     async (query) => {
       const assessment = assessArtifact(feed, query)
-      return toolResult(
-        policy ? { ...assessment, policyDecision: evaluatePolicy(assessment, policy) } : assessment,
-      )
+      // Computed per call, not once at startup: a long-lived server hands the
+      // same feed out for hours, and an agent reading "no-known-advisory"
+      // deserves to know how old the evidence behind that answer is.
+      const feedAge = evaluateFreshness(feed, { maxAgeHours: policy?.maxFeedAgeHours })
+      return toolResult({
+        ...assessment,
+        feedAge,
+        ...(policy ? { policyDecision: evaluatePolicy(assessment, policy) } : {}),
+      })
     },
   )
 
