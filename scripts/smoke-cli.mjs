@@ -143,10 +143,110 @@ try {
   // Nothing was disproved here, the check simply had nowhere to look.
   const unreadable = run(["verify", path.join(scanRoot, "no-such-feed")])
   assert.equal(unreadable.status, 2)
+
+  // A lockfile is a claim about the disk alone, so the whole round trip runs
+  // against a tree this script builds rather than against the feed.
+  const lockRoot = path.join(scanRoot, "lock-skills")
+  const lockfile = path.join(scanRoot, "lock.json")
+  for (const name of ["lock-alpha", "lock-beta"]) {
+    mkdirSync(path.join(lockRoot, name), { recursive: true })
+    writeFileSync(path.join(lockRoot, name, "SKILL.md"), `# ${name}\n`)
+  }
+
+  const written = run(["lock", lockRoot, "--lockfile", lockfile, "--format", "json"])
+  assert.equal(written.status, 0, written.stderr)
+  const writtenResult = JSON.parse(written.stdout)
+  assert.equal(writtenResult.schemaVersion, "1")
+  assert.equal(writtenResult.written, true)
+  assert.equal(writtenResult.artifacts, 2)
+
+  // Approving the same bytes twice must not rewrite the file, or every run
+  // would dirty a working tree.
+  const rewritten = run(["lock", lockRoot, "--lockfile", lockfile, "--format", "json"])
+  assert.equal(rewritten.status, 0, rewritten.stderr)
+  assert.equal(JSON.parse(rewritten.stdout).written, false)
+
+  const clean = run(["lock", "--check", lockRoot, "--lockfile", lockfile, "--format", "json"])
+  assert.equal(clean.status, 0, clean.stderr)
+  const cleanResult = JSON.parse(clean.stdout)
+  assert.equal(cleanResult.decision, "allow")
+  assert.deepEqual(cleanResult.reasons, [])
+  assert.equal(cleanResult.drift.matched.length, 2)
+
+  // Adding a file changes an approved artifact. Under the default policy that
+  // is reported without failing; --strict is what makes the softer signal count.
+  writeFileSync(path.join(lockRoot, "lock-alpha", "extra.md"), "more\n")
+  const drifted = run(["lock", "--check", lockRoot, "--lockfile", lockfile, "--format", "json"])
+  assert.equal(drifted.status, 0, drifted.stderr)
+  const driftedResult = JSON.parse(drifted.stdout)
+  assert.equal(driftedResult.decision, "review")
+  assert.equal(driftedResult.drift.changed.length, 1)
+  assert.equal(driftedResult.drift.changed[0].key, "lock-alpha")
+
+  const strictDrift = run(["lock", "--check", lockRoot, "--lockfile", lockfile, "--strict"])
+  assert.equal(strictDrift.status, 1)
+
+  // An artifact nobody approved is the case a policy is most likely to want
+  // to block outright.
+  rmSync(path.join(lockRoot, "lock-alpha", "extra.md"))
+  mkdirSync(path.join(lockRoot, "lock-gamma"), { recursive: true })
+  writeFileSync(path.join(lockRoot, "lock-gamma", "SKILL.md"), "# lock-gamma\n")
+
+  const unlocked = run(["lock", "--check", lockRoot, "--lockfile", lockfile, "--format", "json"])
+  assert.equal(unlocked.status, 0, unlocked.stderr)
+  const unlockedResult = JSON.parse(unlocked.stdout)
+  assert.equal(unlockedResult.decision, "review")
+  assert.deepEqual(
+    unlockedResult.drift.unlocked.map((artifact) => artifact.key),
+    ["lock-gamma"],
+  )
+
+  const blockPolicy = path.join(scanRoot, "lock-policy.json")
+  writeFileSync(blockPolicy, JSON.stringify({ schemaVersion: "1", unlockedArtifacts: "block" }))
+  const blocked = run([
+    "lock",
+    "--check",
+    lockRoot,
+    "--lockfile",
+    lockfile,
+    "--policy",
+    blockPolicy,
+  ])
+  assert.equal(blocked.status, 1)
+
+  // A machine with a smaller install set is not drift, so a locked artifact
+  // that is simply absent stays clean under the default policy.
+  rmSync(path.join(lockRoot, "lock-gamma"), { recursive: true })
+  rmSync(path.join(lockRoot, "lock-beta"), { recursive: true })
+  const absent = run(["lock", "--check", lockRoot, "--lockfile", lockfile, "--format", "json"])
+  assert.equal(absent.status, 0, absent.stderr)
+  const absentResult = JSON.parse(absent.stdout)
+  assert.deepEqual(
+    absentResult.drift.missing.map((artifact) => artifact.key),
+    ["lock-beta"],
+  )
+
+  // Checking against a lockfile that is not there is a check that could not
+  // run, which is exit 2, not drift.
+  const noLockfile = run([
+    "lock",
+    "--check",
+    lockRoot,
+    "--lockfile",
+    path.join(scanRoot, "no-such-lock.json"),
+  ])
+  assert.equal(noLockfile.status, 2)
+
+  // lock reads no feed and reports no findings, so the flags that only make
+  // sense for those are refused rather than quietly ignored.
+  for (const flag of [["--offline"], ["--refresh"], ["--format", "sarif"], ["--allow-incomplete"]]) {
+    const refused = run(["lock", lockRoot, "--lockfile", lockfile, ...flag])
+    assert.equal(refused.status, 2, `expected lock to refuse ${flag[0]}`)
+  }
 } finally {
   rmSync(scanRoot, { recursive: true, force: true })
 }
 
 console.log(
-  "cli smoke: version, detection, validation, bounded scan, feed freshness, and feed verification paths passed",
+  "cli smoke: version, detection, validation, bounded scan, feed freshness, feed verification, and lockfile paths passed",
 )
