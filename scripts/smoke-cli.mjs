@@ -194,12 +194,14 @@ try {
   assert.equal(seededLock.artifacts[0].ecosystem, "npm")
   assert.equal(seededLock.artifacts[0].version, "1.2.0")
 
-  // Rewrite the file with its keys in the published schema's declared order.
-  // Same approvals, different bytes.
+  // Rewrite the file with its keys in the published schema's declared order,
+  // plus the $schema reference the schema permits. Same approvals.
   writeFileSync(
     versionedLockfile,
     `${JSON.stringify(
       {
+        $schema:
+          "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/schema/lock.schema.json",
         schema_version: "1",
         generated: seededLock.generated,
         artifacts: seededLock.artifacts.map((artifact) => ({
@@ -228,6 +230,11 @@ try {
   const reorderedResult = JSON.parse(reordered.stdout)
   assert.equal(reorderedResult.written, false, "a key reordering must not rewrite the lockfile")
   assert.equal(reorderedResult.generated, seededLock.generated)
+  // A $schema reference the file carried is the repository's, not ours to drop.
+  assert.ok(
+    JSON.parse(readFileSync(versionedLockfile, "utf8")).$schema,
+    "lock must preserve a $schema reference",
+  )
 
   const clean = run(["lock", "--check", lockRoot, "--lockfile", lockfile, "--format", "json"])
   assert.equal(clean.status, 0, clean.stderr)

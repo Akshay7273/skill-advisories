@@ -4957,6 +4957,7 @@ function buildLock(artifacts, generated, previous) {
   );
   const unchanged = previous !== void 0 && sameApprovals(previous.artifacts, locked);
   return {
+    ...previous?.$schema ? { $schema: previous.$schema } : {},
     schema_version: "1",
     generated: unchanged ? previous.generated : generated,
     artifacts: locked

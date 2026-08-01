@@ -115,6 +115,30 @@ describe("artifact lock", () => {
     }
   })
 
+  it("preserves a $schema reference the previous lockfile carried", () => {
+    // The published schema permits $schema, so a repository is entitled to
+    // point its editor at it. Dropping the line on the next write would take
+    // that validation away without saying so.
+    const url =
+      "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/schema/lock.schema.json"
+    const previous = parseArtifactLock({
+      $schema: url,
+      schema_version: "1",
+      generated: NOW,
+      artifacts: [{ name: "alpha", sha256: digest("a"), files: 3 }],
+    })
+    const again = buildLock(
+      [observed("alpha", digest("a"), { ecosystem: undefined })],
+      "2026-09-01T00:00:00.000Z",
+      previous,
+    )
+    expect(again.$schema).toBe(url)
+    // Still stable, so preserving the reference did not read as a change.
+    expect(again.generated).toBe(NOW)
+    // Never invented for a file that did not ask for one.
+    expect(buildLock([observed("alpha", digest("a"))], NOW).$schema).toBeUndefined()
+  })
+
   it("locks one entry for the same artifact installed twice", () => {
     const lock = buildLock(
       [

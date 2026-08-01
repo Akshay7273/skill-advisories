@@ -106,7 +106,10 @@ function sameApprovals(left: LockedArtifact[], right: LockedArtifact[]): boolean
  *
  * Passing the previous lock keeps `generated` stable when the approved set has
  * not changed, so re-running `lock` on an unchanged tree produces byte
- * identical output and CI can diff it.
+ * identical output and CI can diff it. A `$schema` reference the previous file
+ * carried is preserved: the published schema allows one, an editor uses it to
+ * validate the file as it is edited, and dropping it on the next write would
+ * take that away without saying so.
  */
 export function buildLock(
   artifacts: ScannedArtifact[],
@@ -146,6 +149,7 @@ export function buildLock(
   )
   const unchanged = previous !== undefined && sameApprovals(previous.artifacts, locked)
   return {
+    ...(previous?.$schema ? { $schema: previous.$schema } : {}),
     schema_version: "1",
     generated: unchanged ? previous.generated : generated,
     artifacts: locked,
