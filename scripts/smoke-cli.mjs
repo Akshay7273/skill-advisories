@@ -243,10 +243,51 @@ try {
     const refused = run(["lock", lockRoot, "--lockfile", lockfile, ...flag])
     assert.equal(refused.status, 2, `expected lock to refuse ${flag[0]}`)
   }
+
+  // rollback judges copies against the history the operator trusts, so the
+  // candidates here are copies of the published feed and the log they are
+  // measured against is the one this repository ships.
+  const history = path.join(root, "feed", "history.json")
+  const intact = path.join(scanRoot, "recovery-intact")
+  cpSync(path.join(root, "feed"), intact, { recursive: true })
+
+  const selected = run(["rollback", intact, "--history", history, "--format", "json"])
+  assert.equal(selected.status, 0, selected.stderr)
+  const selectedResult = JSON.parse(selected.stdout)
+  assert.equal(selectedResult.schemaVersion, "1")
+  assert.equal(selectedResult.selected.dir, intact)
+  assert.deepEqual(selectedResult.selected.problems, [])
+  assert.equal(selectedResult.selected.position, selectedResult.published - 1)
+
+  // The copy tampered with above still describes itself consistently enough to
+  // be worth reporting, but nothing in it is provably good, so there is
+  // nowhere safe to land and that is a finding rather than an outage.
+  const nowhere = run(["rollback", published, "--history", history, "--format", "json"])
+  assert.equal(nowhere.status, 1)
+  const nowhereResult = JSON.parse(nowhere.stdout)
+  assert.equal(nowhereResult.selected, undefined)
+  assert.ok(nowhereResult.candidates[0].problems.length > 0)
+
+  // A bad copy alongside a good one must not cost the good one its place.
+  const mixed = run(["rollback", published, intact, "--history", history, "--format", "json"])
+  assert.equal(mixed.status, 0, mixed.stderr)
+  assert.equal(JSON.parse(mixed.stdout).selected.dir, intact)
+
+  // With no readable log there is no authority to judge any copy against, so
+  // this is a selection that could not run rather than one that found nothing.
+  const noHistory = run(["rollback", intact, "--history", path.join(scanRoot, "no-such-log.json")])
+  assert.equal(noHistory.status, 2)
+
+  // Age is refused rather than ignored: a recovery point is normally old, and
+  // a threshold that looked like it applied here would mislead.
+  for (const flag of [["--offline"], ["--format", "sarif"], ["--max-feed-age", "48"]]) {
+    const refused = run(["rollback", intact, "--history", history, ...flag])
+    assert.equal(refused.status, 2, `expected rollback to refuse ${flag[0]}`)
+  }
 } finally {
   rmSync(scanRoot, { recursive: true, force: true })
 }
 
 console.log(
-  "cli smoke: version, detection, validation, bounded scan, feed freshness, feed verification, and lockfile paths passed",
+  "cli smoke: version, detection, validation, bounded scan, feed freshness, feed verification, lockfile, and recovery selection paths passed",
 )
