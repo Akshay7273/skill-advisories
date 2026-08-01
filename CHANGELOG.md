@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-01
+
+### Added
+- Optional `archive_url`, `retrieved`, and `content_sha256` provenance fields on advisory references
+- Validation of provenance invariants, duplicate references, and bare-domain citations on every pull request
+- Weekly network reachability probe for cited evidence, reported on the feed health page
+- Feed freshness classification reported as `feedAge` on `check` and `scan` results
+- `--max-feed-age` flag and `maxFeedAgeHours` policy key with a documented 48-hour default
+- Fail-closed staleness: a non-`fresh` feed warns by default and exits 2 under `--strict`
+- Feed age computed per call on every MCP `check_artifact` assessment
+- Append-only publication history at `feed/history.json`, covered by the checksum manifest
+- `verify` subcommand checking a feed directory against its digest, manifest, compact projection, delta cursor, and history
+- Feed freshness, verification, and reference provenance guides
+
+### Changed
+- OSV exports keep provenance out of `references` and re-emit it under `database_specific.reference_provenance`
+
 ## [0.6.0-rc.1] - 2026-07-31
 
 ### Added
