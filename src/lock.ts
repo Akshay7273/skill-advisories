@@ -51,15 +51,48 @@ export function lockKey(artifact: { name: string; ecosystem?: string }): string 
   return artifact.ecosystem ? `${artifact.ecosystem}:${artifact.name}` : artifact.name
 }
 
+/**
+ * Fields are emitted in the order `schema/lock.schema.json` declares them, so
+ * the published schema, this module's parser, and this writer all agree on one
+ * canonical form. A tool that implements the published schema faithfully then
+ * produces a file this writer does not immediately reorder.
+ */
 function lockedFrom(artifact: ScannedArtifact): LockedArtifact {
-  const locked: LockedArtifact = {
+  return {
     name: artifact.name,
+    ...(artifact.ecosystem ? { ecosystem: artifact.ecosystem } : {}),
+    ...(artifact.version ? { version: artifact.version } : {}),
     sha256: artifact.sha256,
     files: artifact.files,
   }
-  if (artifact.ecosystem) locked.ecosystem = artifact.ecosystem
-  if (artifact.version) locked.version = artifact.version
-  return locked
+}
+
+/**
+ * The comparable form of a locked entry: its fields in a fixed order.
+ *
+ * Two lockfiles approving the same artifacts are the same approval whatever
+ * order their keys happen to sit in, and key order is not something a caller
+ * controls. `parseArtifactLock` returns fields in the order this module's
+ * schema declares them, an editor or another tool writing the published schema
+ * may use yet another, and neither matches the order `lockedFrom` builds. A
+ * comparison over serialised bytes would read all of those as a changed
+ * approval set.
+ */
+function comparable(artifact: LockedArtifact): string {
+  return JSON.stringify([
+    artifact.name,
+    artifact.ecosystem ?? null,
+    artifact.version ?? null,
+    artifact.sha256,
+    artifact.files,
+  ])
+}
+
+function sameApprovals(left: LockedArtifact[], right: LockedArtifact[]): boolean {
+  if (left.length !== right.length) return false
+  // Both sides are already ordered by identity, so a positional walk is enough
+  // and a differing order is a differing set.
+  return left.every((artifact, index) => comparable(artifact) === comparable(right[index]))
 }
 
 /**
@@ -111,8 +144,7 @@ export function buildLock(
   const locked = [...byKey.values()].sort((left, right) =>
     lockKey(left).localeCompare(lockKey(right)),
   )
-  const unchanged =
-    previous !== undefined && JSON.stringify(previous.artifacts) === JSON.stringify(locked)
+  const unchanged = previous !== undefined && sameApprovals(previous.artifacts, locked)
   return {
     schema_version: "1",
     generated: unchanged ? previous.generated : generated,
