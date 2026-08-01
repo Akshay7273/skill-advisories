@@ -9,6 +9,8 @@ import { LOCK_FILE_NAME, buildLock, diffLock, parseArtifactLock } from "./lock.j
 import type { ArtifactLock } from "./lock.js"
 import { DEFAULT_FEED_URL, collectKnownNames, loadFeed, matchHashes, matchNames } from "./lookup.js"
 import { evaluateLockDrift, loadPolicy, parsePolicy } from "./policy.js"
+import { selectRecoveryPoint } from "./rollback.js"
+import type { RecoverySelection } from "./rollback.js"
 import { ECOSYSTEMS } from "./types.js"
 import type { Advisory, Ecosystem } from "./types.js"
 import { defaultSkillDirs, observeArtifacts, scanSkills } from "./scan.js"
@@ -30,6 +32,7 @@ Usage:
   skill-advisories verify [dir]       Verify a published feed directory against its own checksums and history (default: feed)
   skill-advisories lock [dir...]      Record the artifacts installed in these directories as approved
   skill-advisories lock --check       Compare installed artifacts against the lockfile without writing
+  skill-advisories rollback [dir...]  Report the newest feed copy the published history proves good (default: feed)
 
 Options:
   --format <format> Output format: human, json, or sarif (default: human)
@@ -54,12 +57,14 @@ Options:
   --check          For lock: report drift against the lockfile without writing it
   --lockfile <path> Path to the artifact lockfile (default: skill-advisories.lock.json)
   --policy <path>  Policy file deciding whether lock drift fails (default: built-in defaults)
+  --history <path> Published feed history a rollback candidate is judged against (default: feed/history.json)
   --help, -h       Show this help
   --version, -v    Show version
 
 Exit codes: 0 = no advisories matched (or below threshold), 1 = matches found (or warnings with --strict), 2 = usage, feed, or incomplete-evidence error
 For verify: 0 = the directory matches its own evidence, 1 = it does not, 2 = the check could not run
-For lock --check: 0 = installed artifacts match the lockfile, 1 = drift the policy rejects, 2 = the check could not run`
+For lock --check: 0 = installed artifacts match the lockfile, 1 = drift the policy rejects, 2 = the check could not run
+For rollback: 0 = a recovery point was selected, 1 = no candidate is provably good, 2 = the selection could not run`
 
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`))
@@ -89,6 +94,7 @@ type ParsedArgs = {
   check: boolean
   lockfile?: string
   policy?: string
+  history?: string
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -113,6 +119,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let check = false
   let lockfile: string | undefined
   let policy: string | undefined
+  let history: string | undefined
 
   const VALID_FORMATS = ["human", "json", "sarif"]
   const VALID_SEVERITIES = ["low", "medium", "high", "critical"]
@@ -203,6 +210,11 @@ function parseArgs(argv: string[]): ParsedArgs {
       const value = argv[i]
       if (!value || value.trim() === "") fail("--policy requires a path")
       policy = value
+    } else if (arg === "--history") {
+      i++
+      const value = argv[i]
+      if (!value || value.trim() === "") fail("--history requires a path")
+      history = value
     } else if (arg === "--help" || arg === "-h") {
       console.log(HELP)
       process.exit(0)
@@ -244,6 +256,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     check,
     lockfile,
     policy,
+    history,
   }
 }
 
@@ -739,6 +752,78 @@ if (args.command === "check") {
       )
     }
   }
+} else if (args.command === "rollback") {
+  if (
+    args.scanConcurrency !== undefined ||
+    args.hashConcurrency !== undefined ||
+    args.maxFileBytes !== undefined ||
+    args.maxFiles !== undefined ||
+    args.maxTotalBytes !== undefined ||
+    args.excludeDirectories.length > 0 ||
+    args.allowIncomplete
+  ) {
+    fail("scan resource options are only supported by the scan command")
+  }
+  if (args.sha256) fail("--sha256 is only supported by the check command")
+  if (args.ecosystem) fail("--ecosystem is only supported by the check and scan commands")
+  if (args.version) fail("--version is only supported by the check command")
+  if (args.failOn) fail("--fail-on decides about advisories, and rollback reads no feed")
+  // A recovery point is chosen precisely because the current state is suspect,
+  // so the copy worth landing on is normally an old one. Age is not a fault
+  // here, and a threshold that looked like it applied would mislead.
+  if (args.maxFeedAgeHours !== undefined) {
+    fail("rollback judges copies by the published history, not by their age")
+  }
+  if (args.offline || args.refresh) {
+    fail("rollback reads local directories and never fetches a feed")
+  }
+  if (args.format === "sarif") {
+    fail("rollback reports on feed copies, not on artifacts, so it has no SARIF form")
+  }
+
+  const dirs = args.positionals.length > 0 ? args.positionals : ["feed"]
+  let result: RecoverySelection
+  try {
+    result = await selectRecoveryPoint(args.history ?? "feed/history.json", dirs)
+  } catch (error) {
+    // Without a readable history there is no authority to judge any copy
+    // against, so this is a selection that could not run rather than one that
+    // found nothing.
+    if (error instanceof VerifyUnavailableError) fail(error.message)
+    throw error
+  }
+
+  if (args.format === "json") {
+    console.log(JSON.stringify({ schemaVersion: "1", ...result }, null, 2))
+  } else {
+    for (const problem of result.problems) {
+      console.error(pc.red(`\u274c ${problem}`))
+    }
+    for (const candidate of result.candidates) {
+      if (candidate === result.selected) continue
+      const reason = candidate.problems[0] ?? "not selected"
+      console.log(pc.dim(`   ${candidate.dir} \u2014 ${reason}`))
+    }
+    if (result.selected) {
+      console.log(
+        pc.green(
+          `\u2705 ${result.selected.dir} \u2014 published ${result.selected.generated}, ${result.selected.advisoryCount} advisories`,
+        ),
+      )
+      console.log(pc.dim(`   cursor ${result.selected.cursor}`))
+      console.log(
+        pc.dim("   recover with the procedure in docs/operations/rollback.md; nothing was changed"),
+      )
+    } else {
+      console.log(
+        pc.red(
+          `\u274c no candidate is provably good \u2014 ${result.candidates.length} examined against ${result.history}`,
+        ),
+      )
+    }
+  }
+
+  process.exitCode = result.selected ? 0 : 1
 } else {
   fail(`unknown command "${args.command}"`)
 }
