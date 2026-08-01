@@ -11,6 +11,9 @@ All notable changes to this project are documented here. The format is based on 
 - `lock` no longer rewrites an unchanged lockfile: approvals are compared by value rather than by serialised bytes, so an entry carrying an `ecosystem` or `version` keeps its `generated` timestamp instead of churning on every run
 - Lockfile fields are written in the order the published schema declares them, so a file produced by another tool implementing that schema is not reordered on first contact
 - `lock` preserves an optional `$schema` reference across a rewrite instead of silently dropping it
+- A lockfile approving one identity twice with two different digests is now refused with exit 2 rather than resolved by position: `lock --check` and an MCP client read the same file through different code paths and could disagree about whether an artifact was approved
+
+Upgrading from 0.8.0: the first `lock` write reorders the keys of any entry carrying an `ecosystem` or `version` into the schema's declared order. That is a one-time diff, `generated` is preserved across it, and `lock --check` is unaffected — a lockfile written by 0.8.0 still passes under `--strict`, so CI needs no attention.
 
 ## [0.8.0] - 2026-08-01
 

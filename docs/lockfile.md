@@ -113,6 +113,16 @@ lockfile that does not exist, or does not parse, is not evidence of drift — th
 check had nowhere to look. Reporting that as a failed comparison would send an
 operator looking for a change that never happened.
 
+**A lockfile approving one identity twice with two different digests is refused
+the same way.** `lock` never writes one, but a botched merge or another tool
+can produce one, and such a file has not said which of the two artifacts it
+approves. Resolving it by position would be worse than refusing it: the drift
+comparison and the lookup behind the MCP server read the entry list
+differently, so one file could report drift to `lock --check` while telling an
+agent the same digest was approved — the exact substitution the lockfile exists
+to catch. Repeating an identity with the *same* digest is redundant rather than
+contradictory and is accepted.
+
 Four kinds of drift are reported together rather than stopping at the first,
 because they mean different things:
 
