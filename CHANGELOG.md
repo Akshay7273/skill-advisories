@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Changed
+- The `v1` action pointer tag now moves to each stable release automatically, so `uses: Akshay7273/skill-advisories@v1` resolves to the newest stable action instead of whichever release last moved it by hand
+
+### Fixed
+- `lock` no longer rewrites an unchanged lockfile: approvals are compared by value rather than by serialised bytes, so an entry carrying an `ecosystem` or `version` keeps its `generated` timestamp instead of churning on every run
+- Lockfile fields are written in the order the published schema declares them, so a file produced by another tool implementing that schema is not reordered on first contact
+- `lock` preserves an optional `$schema` reference across a rewrite instead of silently dropping it
+
 ## [0.8.0] - 2026-08-01
 
 ### Added
