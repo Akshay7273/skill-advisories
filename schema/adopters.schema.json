@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Akshay7273/skill-advisories/main/schema/adopters.schema.json",
+  "title": "skill-advisories adoption ledger",
+  "description": "Independently verifiable downstream integrations. Registry downloads are deliberately absent: a download is not a dependent, and this file records only integrations a third party can check.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "entries"],
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "schema_version": { "const": "1" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "url", "integration", "consent", "recorded", "verified"],
+        "properties": {
+          "name": {
+            "description": "The adopting project, as it calls itself.",
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "description": "Public link at which the integration itself can be seen -- a workflow file, a config, a dependency manifest. Not a homepage.",
+            "type": "string",
+            "pattern": "^https://",
+            "format": "uri"
+          },
+          "integration": {
+            "description": "Which surface the adopter uses.",
+            "enum": ["cli", "action", "mcp", "feed", "library"]
+          },
+          "consent": {
+            "description": "How the adopter agreed to be listed. public-link: the integration is public and speaks for itself. maintainer-stated: a maintainer said so somewhere citable.",
+            "enum": ["public-link", "maintainer-stated"]
+          },
+          "consent_url": {
+            "description": "Where that consent can be read. Required for an entry to count towards the adoption gate.",
+            "type": "string",
+            "pattern": "^https://",
+            "format": "uri"
+          },
+          "recorded": {
+            "description": "When this entry was added, ISO 8601.",
+            "type": "string",
+            "format": "date-time"
+          },
+          "verified": {
+            "description": "Whether a maintainer has followed the links and confirmed the integration is real and current. An unverified entry is kept but never counted.",
+            "type": "boolean"
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}
