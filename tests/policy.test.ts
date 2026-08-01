@@ -136,3 +136,85 @@ describe("lock drift policy", () => {
     expect(evaluateLockDrift(absent, policy)).toMatchObject({ decision: "allow", reasons: [] })
   })
 })
+
+describe("lock status policy", () => {
+  const approved = { key: "npm:example", status: "approved" as const, approved: digest("a") }
+  const unapproved = { key: "npm:example", status: "unapproved" as const }
+
+  it("leaves an approved artifact where the rest of the policy put it", () => {
+    const policy = parsePolicy({ schemaVersion: "1", unlockedArtifacts: "block" })
+    expect(evaluatePolicy(safeAssessment, policy, approved)).toMatchObject({
+      decision: "allow",
+      reasons: [],
+    })
+  })
+
+  it("carries an unapproved artifact to the configured decision, not a fixed one", () => {
+    for (const unlockedArtifacts of ["review", "block"] as const) {
+      const policy = parsePolicy({ schemaVersion: "1", unlockedArtifacts })
+      const decision = evaluatePolicy(safeAssessment, policy, unapproved)
+      expect(decision.decision).toBe(unlockedArtifacts)
+      expect(decision.reasons).toEqual(["npm:example is not approved by the lockfile"])
+    }
+  })
+
+  it("names the approved digest when the bytes in hand are different", () => {
+    const policy = parsePolicy({ schemaVersion: "1", unlockedArtifacts: "block" })
+    const changed = { key: "npm:example", status: "changed" as const, approved: digest("a") }
+    expect(evaluatePolicy(safeAssessment, policy, changed).reasons).toEqual([
+      `npm:example does not match its approved contents (expected ${digest("a")})`,
+    ])
+  })
+
+  it("does not let an unchecked name pass as a checked one", () => {
+    // A locked name with no digest to compare has not been shown to be the
+    // approved artifact, and "we did not check" must not read as "we checked".
+    const policy = parsePolicy({ schemaVersion: "1", unlockedArtifacts: "block" })
+    const unverified = { key: "npm:example", status: "unverified" as const, approved: digest("a") }
+    const decision = evaluatePolicy(safeAssessment, policy, unverified)
+    expect(decision.decision).toBe("block")
+    expect(decision.reasons[0]).toContain("no digest was supplied to compare against")
+  })
+
+  it("says nothing about approval when the policy allows unapproved artifacts", () => {
+    const policy = parsePolicy({ schemaVersion: "1", unlockedArtifacts: "allow" })
+    expect(evaluatePolicy(safeAssessment, policy, unapproved)).toMatchObject({
+      decision: "allow",
+      reasons: [],
+    })
+  })
+
+  it("reports the lock objection ahead of a name resemblance", () => {
+    // Both are softer signals, but one is a fact about the bytes in hand and
+    // the other an inference about what they might be.
+    const policy = parsePolicy({ schemaVersion: "1", unlockedArtifacts: "review" })
+    const resembling = { ...safeAssessment, warnings: ["looks like a known advisory identity"] }
+    expect(evaluatePolicy(resembling, policy, unapproved).reasons).toEqual([
+      "npm:example is not approved by the lockfile",
+    ])
+    expect(evaluatePolicy(resembling, policy).reasons).toEqual([
+      "artifact name resembles a known advisory identity",
+    ])
+  })
+
+  it("still blocks on a disclosed advisory before it considers the lockfile", () => {
+    const policy = parsePolicy({ schemaVersion: "1", unlockedArtifacts: "review" })
+    const known: ArtifactAssessment = {
+      ...safeAssessment,
+      status: "known-risk",
+      matches: [
+        {
+          id: "SKA-TEST",
+          severity: "critical",
+          type: "malicious",
+          summary: "test",
+          matchedBy: "name",
+          references: [],
+        },
+      ],
+    }
+    const decision = evaluatePolicy(known, policy, unapproved)
+    expect(decision.decision).toBe("block")
+    expect(decision.reasons).toEqual(["SKA-TEST has critical severity (policy threshold: high)"])
+  })
+})
