@@ -1,3 +1,9 @@
 node_modules/
-dist/
+dist/*
 site/
+
+# action.yml runs the bundle straight from the checkout, so this one build
+# output has to be committed. Everything else in dist/ is built on demand.
+# The pattern above lists dist/* rather than dist/ because git will not
+# descend into an excluded directory, and a negation there would never apply.
+!dist/action.js
