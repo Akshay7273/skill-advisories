@@ -40,7 +40,7 @@ Reduce false positives and false negatives as the database grows.
 - [x] Ecosystem-aware lookup (`--ecosystem`) and indexed matching
 - [x] Version-aware advisories and affected-version evaluation
 - [x] Detect installed skill metadata instead of relying only on directory names
-- [ ] Configurable scan exclusions and bounded hashing concurrency
+- [x] Configurable scan exclusions and bounded hashing concurrency
 - [x] Stable machine-readable result schema with documented exit semantics
 - [x] A regression corpus for name, hash, version, and typosquat detection
 
@@ -71,7 +71,7 @@ Put safety checks directly in the workflows where agents acquire capabilities.
 - [x] Declarative policy file for severity, ecosystem, hash, and warning requirements
 - [ ] Lockfile format for approved artifact identities and hashes
 - [x] Reusable API package with no CLI side effects
-- [ ] Reference integrations for at least three agent ecosystems
+- [x] Reference integrations for at least three agent ecosystems
 
 **Exit criteria:** an agent can check an artifact before installation, explain a
 decision with cited evidence, and enforce a repository-owned security policy.
