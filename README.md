@@ -40,6 +40,29 @@ every cited page is probed weekly for [link rot](docs/evidence-provenance.md#det
 A downloaded copy can be checked against its own evidence with
 [`skill-advisories verify`](docs/feed-freshness.md#verification).
 
+## Try it in 30 seconds
+
+```bash
+npx @akshay7273/skill-advisories check better-polymarket
+```
+
+```
+❌ 1 advisory match(es) across 1 skill(s) checked:
+  better-polymarket [clawhub] → SKA-2026-0002 [critical] better-polymarket and polymarket-all-in-one hide a reverse-shell backdoor inside operational market-search code rather than install hooks.
+      https://www.koi.ai/blog/clawhavoc-341-malicious-clawedbot-skills-found-by-the-bot-they-were-targeting
+      https://www.antiy.net/p/clawhavoc-analysis-of-large-scale-poisoning-campaign-targeting-the-openclaw-skill-market-for-ai-agents/
+```
+
+That is a real advisory with real sources, and the command exits 1 so CI stops.
+A name with nothing against it prints a single line and exits 0. Nothing is
+uploaded: the feed is downloaded and matched locally.
+
+To check what is already installed rather than a name you type, run
+`npx @akshay7273/skill-advisories scan`.
+
+Considering using this on a real project? [docs/pilot.md](docs/pilot.md)
+describes what a pilot involves and what is asked afterwards.
+
 ## CLI
 
 ```bash
@@ -172,8 +195,9 @@ Inputs: `names` (space-separated skill names), `scan-dir` (directory to scan), `
 `@v1` is a moving pointer to the newest stable release, and it names the input
 contract above rather than the package version -- the inputs have been stable
 since v1 while the package is still 0.x. Pin a specific release such as
-`@v0.8.0` if you would rather adopt changes deliberately; prereleases never move
-the pointer.
+`@v0.8.0` if you would rather adopt changes deliberately, or a commit SHA if
+you want upgrades to be something you approve rather than receive; prereleases
+never move the pointer.
 
 ## Data integrity
 

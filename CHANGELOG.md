@@ -4,16 +4,30 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-02
+
+### Added
+- `adopters.json` and `schema/adopters.schema.json`: a ledger of downstream integrations, where an entry counts only with a public link and the maintainer's recorded consent. Validated in CI on every pull request, and currently empty
+- `metrics/history.json` and `npm run metrics:collect`: readiness signals collected from public APIs into an append-only, dated log, each value carrying the URL it came from. A monthly workflow proposes each collection as a pull request
+- `docs/pilot.md` and a pilot issue template describing what a pilot involves, what is asked afterwards, and what the project will not claim on a participant's behalf
+- A "Try it in 30 seconds" example in the README, showing verbatim output for a real advisory
+
 ### Changed
 - The `v1` action pointer tag now moves to each stable release automatically, so `uses: Akshay7273/skill-advisories@v1` resolves to the newest stable action instead of whichever release last moved it by hand
+- The Claude for Open Source readiness report now points at the measured log instead of a hand-maintained table, and records the window each figure covers
+- The publish workflow's `contents`, `id-token`, and `attestations` write permissions are scoped to the job that uses them, leaving the workflow read-only by default
+- Nineteen action references across six workflows are pinned to commit SHAs, each with its release tag in a trailing comment
 
 ### Fixed
 - `lock` no longer rewrites an unchanged lockfile: approvals are compared by value rather than by serialised bytes, so an entry carrying an `ecosystem` or `version` keeps its `generated` timestamp instead of churning on every run
 - Lockfile fields are written in the order the published schema declares them, so a file produced by another tool implementing that schema is not reordered on first contact
 - `lock` preserves an optional `$schema` reference across a rewrite instead of silently dropping it
 - A lockfile approving one identity twice with two different digests is now refused with exit 2 rather than resolved by position: `lock --check` and an MCP client read the same file through different code paths and could disagree about whether an artifact was approved
+- The readiness download figure now states its window. The previous baseline of 303 was correct for 2026-07-01 through 2026-07-30; the rolling month reads 823 because 2026-07-31 alone contributed 520 downloads, which for a package with no dependents is mirror traffic rather than adoption
 
 Upgrading from 0.8.0: the first `lock` write reorders the keys of any entry carrying an `ecosystem` or `version` into the schema's declared order. That is a one-time diff, `generated` is preserved across it, and `lock --check` is unaffected — a lockfile written by 0.8.0 still passes under `--strict`, so CI needs no attention.
+
+No dependent packages signal is collected: the npm registry search API accepts a `depends:<pkg>` qualifier and silently ignores it, so there is no public endpoint that answers it honestly. The v0.6 adoption gate remains open; it is now answered by a file anyone can read rather than by prose.
 
 ## [0.8.0] - 2026-08-01
 

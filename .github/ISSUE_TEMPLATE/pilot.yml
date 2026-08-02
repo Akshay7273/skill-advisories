@@ -1,0 +1,73 @@
+name: Report a pilot or integration
+description: Tell us you are using skill-advisories, or that you tried it and stopped
+title: "[pilot] "
+labels: ["adoption"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying this. [docs/pilot.md](https://github.com/Akshay7273/skill-advisories/blob/main/docs/pilot.md)
+        describes what a pilot involves and what this project will not claim on
+        your behalf.
+
+        You do not need a successful result to open this. "We tried it and it
+        was not worth it" is genuinely useful and will not be recorded as an
+        adoption.
+  - type: input
+    id: project
+    attributes:
+      label: Project or team
+      description: What should it be called if it is listed?
+    validations:
+      required: true
+  - type: dropdown
+    id: integration
+    attributes:
+      label: Which integration
+      description: Open a separate report for each, if you use more than one.
+      options:
+        - CLI
+        - GitHub Action
+        - MCP server
+        - Feed consumed directly
+        - Library / API
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Public link to the integration
+      description: >-
+        A workflow file, config, commit, comment, or post -- anything a third
+        party can open and check. Leave blank if the integration is private;
+        the report is still welcome, it just cannot be listed.
+      placeholder: https://github.com/your-org/your-repo/blob/main/.github/workflows/ci.yml
+  - type: dropdown
+    id: consent
+    attributes:
+      label: May we list this project publicly?
+      description: >-
+        A public link alone is not enough -- consent is recorded separately and
+        can be withdrawn at any time, with no reason required.
+      options:
+        - "Yes, list us"
+        - "Not yet -- ask me again later"
+        - "No, this report is for your information only"
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: What happened
+      description: >-
+        What you checked, what it found or missed, and anything that got in the
+        way. False positives and gaps in coverage are the most useful thing you
+        can report.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        Accepted entries are recorded in
+        [`adopters.json`](https://github.com/Akshay7273/skill-advisories/blob/main/adopters.json),
+        which is validated in CI. An entry can be removed on request.

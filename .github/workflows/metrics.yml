@@ -1,0 +1,84 @@
+name: Readiness metrics
+
+# The readiness signals move on the ecosystem's schedule, not on ours, so this
+# runs monthly rather than per pull request. Collection never fails the run: a
+# rate-limited registry is not a broken build, and a source that does not
+# answer is recorded as null rather than carried forward.
+#
+# The result is proposed as a pull request rather than pushed. `main` requires
+# linear history and conversation resolution, and a bot committing measurements
+# straight onto it would be exactly the unreviewed overwrite this log exists to
+# replace. If nothing changed, no branch and no pull request are created.
+#
+# Note for anyone re-enabling this on a fork: opening a pull request from a
+# workflow requires "Allow GitHub Actions to create and approve pull requests"
+# in the repository's Actions settings. Without it the collection still runs
+# and the artifact is still uploaded; only the pull-request step fails.
+on:
+  schedule:
+    - cron: "23 6 3 * *"
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  collect:
+    name: Collect readiness signals
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Collect readiness signals
+        run: npm run metrics:collect
+      - name: Verify the appended log is still consistent
+        run: npm run metrics:check
+      - name: Upload the collected log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: metrics-history
+          path: metrics/history.json
+          retention-days: 90
+      - name: Propose the collection
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet metrics/history.json; then
+            echo "No change to metrics/history.json; nothing to propose."
+            exit 0
+          fi
+          branch="metrics/collection-$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add metrics/history.json
+          git commit -m "chore(metrics): record the $(date -u +%Y-%m) collection"
+          git push --force origin "$branch"
+          if gh pr view "$branch" --json state --jq .state 2>/dev/null | grep -q OPEN; then
+            echo "A pull request for $branch is already open; pushed the update to it."
+            exit 0
+          fi
+          cat > /tmp/metrics-pr-body.md <<'BODY'
+          Automated collection from `scripts/collect-metrics.mjs`.
+
+          Each value carries the URL it came from, so every figure here can be
+          re-derived rather than trusted. A `null` means the source did not
+          answer during this run -- it does not mean the signal is zero, and no
+          previous value has been carried forward in its place.
+
+          Downloads are not adoption. The adoption gate is answered by
+          `adopters.json`, which is filled in by hand from evidence a person
+          checked.
+          BODY
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore(metrics): record the $(date -u +%Y-%m) collection" \
+            --body-file /tmp/metrics-pr-body.md
