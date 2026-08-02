@@ -1,0 +1,23 @@
+{
+  "schema_version": "1",
+  "entries": [
+    {
+      "collected": "2026-08-02T00:04:44.481Z",
+      "source_commit": "local",
+      "signals": {
+        "npm_downloads_last_month": {
+          "value": 823,
+          "source": "https://api.npmjs.org/downloads/point/last-month/@akshay7273/skill-advisories"
+        },
+        "github_stars": {
+          "value": 0,
+          "source": "https://api.github.com/repos/Akshay7273/skill-advisories"
+        },
+        "openssf_scorecard": {
+          "value": 6.2,
+          "source": "https://api.securityscorecards.dev/projects/github.com/Akshay7273/skill-advisories"
+        }
+      }
+    }
+  ]
+}

@@ -17,9 +17,9 @@ function collection(collected: string, downloads: number | null = 823): MetricsE
         value: downloads,
         source: "https://api.npmjs.org/downloads/point/last-month/@akshay7273/skill-advisories",
       },
-      registry_dependents: {
+      github_stars: {
         value: 0,
-        source: "https://registry.npmjs.org/-/v1/search",
+        source: "https://api.github.com/repos/Akshay7273/skill-advisories",
       },
     },
   }
@@ -64,7 +64,7 @@ describe("readiness metrics", () => {
     const history = collect(EMPTY_METRICS, collection("2026-08-01T00:00:00.000Z", null))
     const signals = latestMetrics(history)!.signals
     expect(signals.npm_downloads_last_month?.value).toBeNull()
-    expect(signals.registry_dependents?.value).toBe(0)
+    expect(signals.github_stars?.value).toBe(0)
   })
 
   it("accepts an internally consistent log", () => {
