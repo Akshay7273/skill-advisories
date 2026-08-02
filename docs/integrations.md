@@ -40,3 +40,10 @@ major release.
   remains compatible, or documented as a migration for breaking changes.
 - A downstream project is listed as an adopter only with a public integration
   link or the maintainer's explicit consent.
+
+## Running a pilot
+
+[docs/pilot.md](pilot.md) describes what trying one of these integrations
+involves, what is asked afterwards, and what this project will not claim on
+your behalf. Accepted pilots are recorded in
+[`adopters.json`](../adopters.json).
