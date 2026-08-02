@@ -8,15 +8,22 @@ on:
         required: true
         type: string
 
+# Read-only by default so a job added here later has to ask for write rather
+# than inherit it. The publish job asks below, and is the only job that does.
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
   publish:
     if: github.repository == 'Akshay7273/skill-advisories'
     runs-on: ubuntu-latest
+    # contents: write creates the release and moves the v1 pointer tag;
+    # id-token and attestations write the provenance attached to the npm
+    # package and the feed checksum manifest.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Validate immutable release tag
         shell: bash
