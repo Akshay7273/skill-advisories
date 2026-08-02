@@ -89,6 +89,15 @@ decision with cited evidence, and enforce a repository-owned security policy.
 - [x] Runnable reference integrations for at least three agent ecosystems
 - [ ] One independently verifiable downstream integration or pilot
 
+This is the only v0.6 item still open, and it is the one no amount of
+engineering closes. It is answered by [`adopters.json`](adopters.json) -- which
+records integrations with a public link and the maintainer's consent, is
+validated in CI, and currently holds zero entries. The intake is
+[docs/pilot.md](docs/pilot.md) and the [pilot
+template](.github/ISSUE_TEMPLATE/pilot.yml). Registry downloads are measured
+separately in [`metrics/history.json`](metrics/history.json) and deliberately
+do not count: a download is not a dependent.
+
 **Exit criteria:** resource usage and performance are reproducibly measured at
 100,000 identities and 10,000 generated filesystem artifacts; every release or
 data incident has a tested maintainer procedure; and at least one downstream
