@@ -9,7 +9,9 @@ permissions: read-all
 
 concurrency:
   group: feed-refresh
-  cancel-in-progress: false
+  # Only the newest heartbeat matters. This also prevents a queued hosted-runner
+  # job from holding every later daily publication behind it indefinitely.
+  cancel-in-progress: true
 
 jobs:
   propose:
