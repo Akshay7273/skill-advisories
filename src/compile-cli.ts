@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises"
 import pc from "picocolors"
-import { buildFeed } from "./compile.js"
+import { buildFeed, compilationGeneratedAt } from "./compile.js"
 import { loadAdvisories } from "./load.js"
 import { validateAdvisories } from "./validate.js"
 import { toOsv } from "./osv.js"
@@ -11,7 +11,19 @@ import { EMPTY_HISTORY, appendHistory, historyEntry, parseFeedHistory } from "./
 import type { FeedHistory } from "./history.js"
 import type { Feed } from "./compile.js"
 
-const dir = process.argv[2] ?? "advisories"
+const argv = process.argv.slice(2)
+const refreshGenerated = argv.includes("--refresh-generated")
+const positionals = argv.filter((arg) => arg !== "--refresh-generated")
+const unknown = positionals.find((arg) => arg.startsWith("-"))
+if (unknown) {
+  console.log(pc.red(`❌ unknown compile option: ${unknown}`))
+  process.exit(2)
+}
+if (positionals.length > 1) {
+  console.log(pc.red("❌ compile accepts at most one advisory directory"))
+  process.exit(2)
+}
+const dir = positionals[0] ?? "advisories"
 
 const loaded = await loadAdvisories(dir)
 const problems = await validateAdvisories(loaded)
@@ -28,9 +40,7 @@ let previousFeed: Feed | undefined
 try {
   const existingRaw = await readFile("feed/feed.json", "utf8")
   previousFeed = JSON.parse(existingRaw) as Feed
-  if (JSON.stringify(previousFeed.advisories) === JSON.stringify(feed.advisories)) {
-    feed.generated = previousFeed.generated
-  }
+  feed.generated = compilationGeneratedAt(feed, previousFeed, refreshGenerated)
 } catch {
   // file doesn't exist yet, keep fresh generated timestamp
 }

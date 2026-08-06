@@ -15,6 +15,27 @@ export const FEED_NAME = "skill-advisories"
 export const FEED_SOURCE = "https://github.com/Akshay7273/skill-advisories"
 
 /**
+ * Keep rebuilds byte-stable unless the caller is intentionally publishing a
+ * freshness heartbeat. A forced refresh changes the publication timestamp
+ * even when the advisory set is unchanged, producing a new verifiable feed
+ * state and resetting consumers' age calculation.
+ */
+export function compilationGeneratedAt(
+  next: Feed,
+  previous?: Feed,
+  refreshGenerated: boolean = false,
+): string {
+  if (
+    previous &&
+    !refreshGenerated &&
+    JSON.stringify(previous.advisories) === JSON.stringify(next.advisories)
+  ) {
+    return previous.generated
+  }
+  return next.generated
+}
+
+/**
  * Build the distributable feed and lookup index from validated advisories.
  * Test advisories never enter the feed. Withdrawn advisories stay in the
  * feed (with their withdrawn timestamp) but are removed from the index.
