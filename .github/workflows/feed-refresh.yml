@@ -39,7 +39,7 @@ jobs:
           npm test
           npm run build
           node dist/cli.js verify feed --strict
-      - name: Propose and auto-merge after required checks
+      - name: Propose and merge after required workflows pass
         env:
           GH_TOKEN: ${{ secrets.FEED_REFRESH_TOKEN }}
         run: |
@@ -60,9 +60,13 @@ jobs:
               --body "Automated freshness publication. The advisory set may be unchanged; the generated timestamp, cursor, delta, checksums, and append-only history are refreshed together and verified before this PR is proposed."
             pr="$(gh pr view "$branch" --json number --jq .number)"
           fi
-          # Dispatch explicitly as well as relying on pull_request events. A
-          # workflow-created PR must always receive the two contexts protected
-          # main requires, even when GitHub suppresses recursive events.
-          gh workflow run ci.yml --ref "$branch"
-          gh workflow run codeql.yml --ref "$branch"
-          gh pr merge "$pr" --auto --squash --delete-branch
+          # workflow_dispatch runs are not counted as PR-required contexts, so
+          # enforce the same gate directly: launch both protected workflows on
+          # this exact head, wait for each entire run to succeed, then use the
+          # maintainer token's admin merge permission. Any failed job stops the
+          # step before merge.
+          ci_url="$(gh workflow run ci.yml --ref "$branch")"
+          codeql_url="$(gh workflow run codeql.yml --ref "$branch")"
+          gh run watch "${ci_url##*/}" --interval 10 --exit-status
+          gh run watch "${codeql_url##*/}" --interval 10 --exit-status
+          gh pr merge "$pr" --admin --squash --delete-branch

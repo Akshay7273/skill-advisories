@@ -58,16 +58,17 @@ and get fail-closed behaviour without enumerating the cases.
    CI invocation happens to run the check.
 
 The daily feed-refresh workflow runs `npm run compile:refresh`, proposes every
-changed publication artifact in one pull request, and enables auto-merge only
-after the repository's required CI and CodeQL checks pass. Ordinary
+changed publication artifact in one pull request, and merges only after full CI
+and CodeQL workflow runs on the exact refresh commit pass. Ordinary
 `npm run compile` remains byte-stable when no advisory changed, so local builds
 and unrelated pull requests do not churn the feed timestamp. The workflow uses
 the masked `FEED_REFRESH_TOKEN` repository secret for its branch and pull
 request because GitHub deliberately suppresses workflow events created with the
 default `GITHUB_TOKEN`; without a separate token the required checks would
-never start and auto-merge would remain blocked. It also explicitly dispatches
-CI and CodeQL against the refresh branch, so the protected contexts are created
-even if a recursive pull-request event is suppressed.
+never start. It explicitly dispatches and waits for CI and CodeQL against the
+refresh branch, then uses the maintainer token's administrative merge permission
+only after both complete successfully. A failed job leaves the PR open and the
+feed unchanged.
 
 ## Setting the limit
 
