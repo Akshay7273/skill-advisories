@@ -61,7 +61,11 @@ The daily feed-refresh workflow runs `npm run compile:refresh`, proposes every
 changed publication artifact in one pull request, and enables auto-merge only
 after the repository's required CI and CodeQL checks pass. Ordinary
 `npm run compile` remains byte-stable when no advisory changed, so local builds
-and unrelated pull requests do not churn the feed timestamp.
+and unrelated pull requests do not churn the feed timestamp. The workflow uses
+the masked `FEED_REFRESH_TOKEN` repository secret for its branch and pull
+request because GitHub deliberately suppresses workflow events created with the
+default `GITHUB_TOKEN`; without a separate token the required checks would
+never start and auto-merge would remain blocked.
 
 ## Setting the limit
 
