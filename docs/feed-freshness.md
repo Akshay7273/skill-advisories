@@ -65,7 +65,9 @@ and unrelated pull requests do not churn the feed timestamp. The workflow uses
 the masked `FEED_REFRESH_TOKEN` repository secret for its branch and pull
 request because GitHub deliberately suppresses workflow events created with the
 default `GITHUB_TOKEN`; without a separate token the required checks would
-never start and auto-merge would remain blocked.
+never start and auto-merge would remain blocked. It also explicitly dispatches
+CI and CodeQL against the refresh branch, so the protected contexts are created
+even if a recursive pull-request event is suppressed.
 
 ## Setting the limit
 
