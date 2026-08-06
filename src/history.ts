@@ -3,8 +3,9 @@ import type { Feed } from "./compile.js"
 import { feedCursor } from "./delta.js"
 
 /**
- * One published state of the feed. The cursor is the semantic identity of the
- * advisory set; the digest covers the exact bytes served for it.
+ * One published state of the feed. The cursor identifies the normalized feed
+ * document (including publication metadata); the digest covers the exact bytes
+ * served for it.
  */
 export const FeedHistoryEntrySchema = z
   .object({

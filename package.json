@@ -46,6 +46,7 @@
   "scripts": {
     "validate": "tsx src/validate-cli.ts",
     "compile": "tsx src/compile-cli.ts",
+    "compile:refresh": "tsx src/compile-cli.ts --refresh-generated",
     "site": "node scripts/build-site.mjs",
     "health:check": "npm run site && node scripts/check-health.mjs",
     "ops:check": "node scripts/check-runbooks.mjs",

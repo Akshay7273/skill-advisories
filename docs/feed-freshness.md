@@ -57,6 +57,12 @@ and get fail-closed behaviour without enumerating the cases.
    file is the durable place to set it, so the rule does not live in whichever
    CI invocation happens to run the check.
 
+The daily feed-refresh workflow runs `npm run compile:refresh`, proposes every
+changed publication artifact in one pull request, and enables auto-merge only
+after the repository's required CI and CodeQL checks pass. Ordinary
+`npm run compile` remains byte-stable when no advisory changed, so local builds
+and unrelated pull requests do not churn the feed timestamp.
+
 ## Setting the limit
 
 ```bash
@@ -112,9 +118,11 @@ cursor, and the feed's cursor against `history.json`.
 
 `feed/history.json` is an append-only log of every published state, recording
 `cursor`, `generated`, `advisory_count`, and the `digest` of the exact bytes
-served. The cursor is the semantic identity of the advisory set, so republishing
-unchanged content does not grow the log. A feed whose cursor never appears in
-the log is the signal that matters most: it was not published here.
+served. The cursor identifies the complete publication state, including its
+generation timestamp, so a freshness heartbeat is independently verifiable
+even when no advisory changed. An ordinary unchanged local rebuild remains a
+no-op. A feed whose cursor never appears in the log is the signal that matters
+most: it was not published here.
 
 | Exit code | Meaning |
 | --- | --- |
