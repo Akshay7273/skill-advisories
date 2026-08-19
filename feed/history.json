@@ -90,6 +90,12 @@
       "generated": "2026-08-18T03:57:36.772Z",
       "advisory_count": 13,
       "digest": "f4f58d349996e011e39e10a76403b6ed0c6421fe1abbfa4af3f91597421bfe98"
+    },
+    {
+      "cursor": "344e1f1e85c9fc1c63a0856d412d8bcde9bfc778700cf4e3291ba1ff5b718fbb",
+      "generated": "2026-08-19T03:58:27.050Z",
+      "advisory_count": 13,
+      "digest": "2ba6590d9f219fc3f6a7e0b70aecf1bf6aba6243644966805b6d3c318f519f78"
     }
   ]
 }
