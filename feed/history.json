@@ -96,6 +96,12 @@
       "generated": "2026-08-19T03:58:27.050Z",
       "advisory_count": 13,
       "digest": "2ba6590d9f219fc3f6a7e0b70aecf1bf6aba6243644966805b6d3c318f519f78"
+    },
+    {
+      "cursor": "9c59ca0ebda392c12fe6873395566914e8f26eea31edd59c13aa54500f2759fc",
+      "generated": "2026-08-20T03:58:17.526Z",
+      "advisory_count": 13,
+      "digest": "6b79b872cf95cee7758f137715522d18ba7a0f4e3e32298a208d2ee7b8b51ab4"
     }
   ]
 }
