@@ -120,6 +120,12 @@
       "generated": "2026-08-23T04:00:05.218Z",
       "advisory_count": 13,
       "digest": "f85350fbf5268692d149dc69c2c5c41c23d9dfacaf33e4617d687d1235a11fb6"
+    },
+    {
+      "cursor": "7f225bc768df46f7451dc75b5dd5e3643e9a6dc3fa1a3c6c7113cc437b2be457",
+      "generated": "2026-08-24T04:05:14.632Z",
+      "advisory_count": 13,
+      "digest": "f6d83811cb6b17473e37909bd3d1dcc20239f73bc616085773745226870ac532"
     }
   ]
 }
