@@ -36,6 +36,24 @@
           "source": "https://api.securityscorecards.dev/projects/github.com/Akshay7273/skill-advisories"
         }
       }
+    },
+    {
+      "collected": "2026-09-03T11:26:55.246Z",
+      "source_commit": "18f8329d83a9e4bfe18cdcf17fc9ea9d4103904b",
+      "signals": {
+        "npm_downloads_last_month": {
+          "value": 1277,
+          "source": "https://api.npmjs.org/downloads/point/last-month/@akshay7273/skill-advisories"
+        },
+        "github_stars": {
+          "value": 1,
+          "source": "https://api.github.com/repos/Akshay7273/skill-advisories"
+        },
+        "openssf_scorecard": {
+          "value": 7,
+          "source": "https://api.securityscorecards.dev/projects/github.com/Akshay7273/skill-advisories"
+        }
+      }
     }
   ]
 }
