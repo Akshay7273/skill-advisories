@@ -240,6 +240,12 @@
       "generated": "2026-09-13T08:17:56.613Z",
       "advisory_count": 13,
       "digest": "b4b9a6ee7aba2de908deab82c48e7e905b538c2ec83fca5e590490dd0af4dd89"
+    },
+    {
+      "cursor": "a02bff32d45c2cd9e1b0978be484da6273c1fe7f86de64a14ec37d25b8193bbb",
+      "generated": "2026-09-14T08:54:09.225Z",
+      "advisory_count": 13,
+      "digest": "adb19fdfba18298cc924ee5eb19526cc409d207561d4b7675356ca93b6e4f856"
     }
   ]
 }
