@@ -294,6 +294,12 @@
       "generated": "2026-09-22T08:31:58.895Z",
       "advisory_count": 13,
       "digest": "9af78d892fbc0f43bc13371c1b5dca87f85520305a973747382e62cb6e80cdf9"
+    },
+    {
+      "cursor": "65477bb54fc1721e6443119372e5e44030a2f37303b30eab0d083d7acc997e88",
+      "generated": "2026-09-23T08:34:08.361Z",
+      "advisory_count": 13,
+      "digest": "f81f244b595e6288377dd12e25370cad6e6cec5c706770134dfcf8039f09a4d8"
     }
   ]
 }
