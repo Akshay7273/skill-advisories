@@ -300,6 +300,12 @@
       "generated": "2026-09-23T08:34:08.361Z",
       "advisory_count": 13,
       "digest": "f81f244b595e6288377dd12e25370cad6e6cec5c706770134dfcf8039f09a4d8"
+    },
+    {
+      "cursor": "87c073854be0992e9f93ff7d53d75cf87de2b489e222edfc88e9fdf4b0264ddf",
+      "generated": "2026-09-24T08:26:38.767Z",
+      "advisory_count": 13,
+      "digest": "f69f8c47affd761905b3d7f1a99da3c8759e2ec8936a3c4902c11b0ca9907be4"
     }
   ]
 }
