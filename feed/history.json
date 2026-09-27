@@ -318,6 +318,12 @@
       "generated": "2026-09-26T08:35:16.001Z",
       "advisory_count": 13,
       "digest": "8fc345599de4907573dfd0ee07cb259701c27bfe98b0d6a8ec8323a85317d6ec"
+    },
+    {
+      "cursor": "f76773c428563e9288c9d1f6d261117ff8fcbe9d1e906c992053a0b67fd4573e",
+      "generated": "2026-09-27T09:14:44.121Z",
+      "advisory_count": 13,
+      "digest": "d6aa421a73859c6b0c7584b9273b006d4b0d539248a362b081b3169a82a1a740"
     }
   ]
 }
