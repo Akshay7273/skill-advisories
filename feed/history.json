@@ -360,6 +360,12 @@
       "generated": "2026-10-03T09:08:26.311Z",
       "advisory_count": 13,
       "digest": "71aa836e4b6a2a2349d1d50a9548fe1a997b443f088820a94fcd87a88a82689a"
+    },
+    {
+      "cursor": "5adaf4194c2e82d7b33731826089fc2dae5446b16972db21940b67d89b95b903",
+      "generated": "2026-10-04T09:46:50.029Z",
+      "advisory_count": 13,
+      "digest": "60763291f2d4a4a9a516c67654e922a6a310293bbe4a56d596b9b1b63aa60590"
     }
   ]
 }
