@@ -390,6 +390,12 @@
       "generated": "2026-10-08T10:33:54.577Z",
       "advisory_count": 13,
       "digest": "737862a2470de4a1b370a25ecea13348497d16bcab32fc6d2a5b117a1566a790"
+    },
+    {
+      "cursor": "7450a7edf0beef2ce1a941d0348c360ca70a8f4e2c2807b6fc784c37e364e06d",
+      "generated": "2026-10-09T10:32:23.654Z",
+      "advisory_count": 13,
+      "digest": "cd7b361d3eacb17fdb4044bd794fb532b511edb0ed272c2c482a84fd59c398d2"
     }
   ]
 }
