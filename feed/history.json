@@ -420,6 +420,12 @@
       "generated": "2026-10-13T10:34:34.825Z",
       "advisory_count": 13,
       "digest": "f2fac503e2c7ce55a7ccaebd6c82835c9bf7271777040892368048c37f7df7fe"
+    },
+    {
+      "cursor": "cfda70f3bc86c33f846d4de1923be75870f07ac33cd7078e833ea3feb6225bf1",
+      "generated": "2026-10-14T08:42:03.514Z",
+      "advisory_count": 13,
+      "digest": "0c11e5412b4d936b5030417f94cabc1b9a9a4816822cf72880b4747e80ed9a97"
     }
   ]
 }
