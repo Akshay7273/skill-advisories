@@ -450,6 +450,12 @@
       "generated": "2026-10-18T08:00:47.615Z",
       "advisory_count": 13,
       "digest": "222be398a43ee1eb1302fe1800d43b490b985c831bc65891bea1cd75f5d80b08"
+    },
+    {
+      "cursor": "0ef89c34ba7591dbfb57e77f1de81c63b2e71b3044103e4894d832b9fcb837e8",
+      "generated": "2026-10-19T08:51:20.539Z",
+      "advisory_count": 13,
+      "digest": "070d63ba3b8d08ab072a66befe9a83b1e12c5789f93d51807399b235c009dd93"
     }
   ]
 }
