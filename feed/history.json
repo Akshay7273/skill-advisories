@@ -480,6 +480,12 @@
       "generated": "2026-10-23T08:31:53.108Z",
       "advisory_count": 13,
       "digest": "17adf79ed212492c0d159a07f2f5b0079664d3912f751db1badd247c788f97d1"
+    },
+    {
+      "cursor": "c373f825baf9e2d806546454bf0cf90edd422446b670db32e689b5295148b5b9",
+      "generated": "2026-10-24T08:06:52.824Z",
+      "advisory_count": 13,
+      "digest": "cd6ea539f7aa0aed5ad8957a7eba6596d8eba2737036145f5f27d6fd3e340b32"
     }
   ]
 }
