@@ -486,6 +486,12 @@
       "generated": "2026-10-24T08:06:52.824Z",
       "advisory_count": 13,
       "digest": "cd6ea539f7aa0aed5ad8957a7eba6596d8eba2737036145f5f27d6fd3e340b32"
+    },
+    {
+      "cursor": "62b2dfc7c37298532ef705e6dfd073a37a0e4fb3e576fffdd55a72313756881d",
+      "generated": "2026-10-25T08:24:16.928Z",
+      "advisory_count": 13,
+      "digest": "7489e6fa46cb446b74f56494e589e7da576ce73e2753c4eb81de95625bf73143"
     }
   ]
 }
