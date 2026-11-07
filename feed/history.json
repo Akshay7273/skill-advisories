@@ -558,6 +558,12 @@
       "generated": "2026-11-06T10:51:12.698Z",
       "advisory_count": 13,
       "digest": "db79b5a44b46f67e00a22a16a7ee2dd658ead0ca2ba224ca889af7612e5c43d9"
+    },
+    {
+      "cursor": "d0ab58571e2e2b0aca0a1ecd8e0a3b90f77ca0148beb1009dd07ccf22f5b9c55",
+      "generated": "2026-11-07T10:05:56.626Z",
+      "advisory_count": 13,
+      "digest": "2b6b88fc9df8baeee1b8c357a228c37a966b58ffff6d50914ea8f186f1c43bf2"
     }
   ]
 }
