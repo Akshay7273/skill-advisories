@@ -588,6 +588,12 @@
       "generated": "2026-11-11T10:55:45.395Z",
       "advisory_count": 13,
       "digest": "c0b16245d04247c9454b7c18f5f6acfe706ef91a376641be4498a339b4317b4f"
+    },
+    {
+      "cursor": "e2f4c874653821ca9fb7f5adaea67b267af84aae92978fd52bf82dd7a94d1ac2",
+      "generated": "2026-11-12T11:06:05.835Z",
+      "advisory_count": 13,
+      "digest": "21cb49f6a0df476d48cede7af4f51fc3eae9f59e6e55703396fd23d32f230238"
     }
   ]
 }
