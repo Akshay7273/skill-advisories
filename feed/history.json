@@ -600,6 +600,12 @@
       "generated": "2026-11-13T10:57:12.833Z",
       "advisory_count": 13,
       "digest": "231bae121f952760634a92ea476293811960beb66c3fc1a8b2ed5ebdcd90dc0d"
+    },
+    {
+      "cursor": "c3074c787f7be8939156d9a3cb652aced8519e97a4db82b5d6c8bda8b5571a51",
+      "generated": "2026-11-14T10:24:16.394Z",
+      "advisory_count": 13,
+      "digest": "58832cf5e0aebba61d761f85a154ecf73bcd719e1a463960bc344ce825faa1f4"
     }
   ]
 }
