@@ -630,6 +630,12 @@
       "generated": "2026-11-18T11:40:10.127Z",
       "advisory_count": 13,
       "digest": "a00668bc01d7d4268fa50099a9a7c753c07824d0f3d63a2d6837c34dd844e3f7"
+    },
+    {
+      "cursor": "01255c617e649dcd843d51a610599937c04dfbd2f29d31259ce7bc1ac6de085c",
+      "generated": "2026-11-19T11:38:36.011Z",
+      "advisory_count": 13,
+      "digest": "7348fb2479b10a805714cdacd7c80342c4cbbd258a0fd309f9866cdf8247a552"
     }
   ]
 }
