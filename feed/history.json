@@ -648,6 +648,12 @@
       "generated": "2026-11-21T10:59:37.487Z",
       "advisory_count": 13,
       "digest": "efc50fdefff69caa5c61d4b3c2efb7614a9f052ee6bd71e410150192e2f5ceb6"
+    },
+    {
+      "cursor": "7365d7b954dfa7c3bf125e66f5855548475321d9f3d1c1b937b08f387f0ac533",
+      "generated": "2026-11-22T11:22:51.132Z",
+      "advisory_count": 13,
+      "digest": "116bf5cb86d77ff35ab037c8870e71cb1ac68ab442d474d67790c30ed309dd1e"
     }
   ]
 }
