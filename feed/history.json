@@ -678,6 +678,12 @@
       "generated": "2026-11-27T12:16:55.744Z",
       "advisory_count": 13,
       "digest": "3a0ee7e1a9b7cc537705b01ab159b2a2636d1d160d8f1174feb54b26dea9cd07"
+    },
+    {
+      "cursor": "2b746205425a61ef12ca5762f6f5f5d8b736ee5a318d7eee12796092f6cc0033",
+      "generated": "2026-11-28T11:43:16.359Z",
+      "advisory_count": 13,
+      "digest": "7180527637bf4e454070c9ae62cf9010c99102114b30ff3d4ea0ad34b25832ff"
     }
   ]
 }
